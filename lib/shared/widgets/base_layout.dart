@@ -55,7 +55,9 @@ class BaseLayout extends StatelessWidget {
                 Container(
                   width: larguraMenu,
                   alignment: Alignment.center,
-                  decoration: const BoxDecoration(
+                  decoration: itensMenu.isEmpty
+                  ? null
+                  : const BoxDecoration(
                     border: Border(right: BorderSide(color: AppColors.borda)),
                   ),
                   child: const _Logo(),
@@ -74,6 +76,7 @@ class BaseLayout extends StatelessWidget {
             child: Row(
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
+                if (itensMenu.isNotEmpty)
                 Container(
                   width: larguraMenu,
                   decoration: const BoxDecoration(
