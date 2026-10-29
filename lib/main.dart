@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'core/theme/app_theme.dart';
-import 'features/home/home_page.dart';
+import 'features/auth/login_page.dart';
 
 void main() {
   runApp(const RokuzenApp());
@@ -15,7 +15,7 @@ class RokuzenApp extends StatelessWidget {
       title: 'Rokuzen',
       debugShowCheckedModeBanner: false,
       theme: AppTheme.tema,
-      home: const HomePage(),
+      home: const LoginPage(),
     );
   }
 }
