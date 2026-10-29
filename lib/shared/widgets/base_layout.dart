@@ -155,7 +155,7 @@ class _ListaMenu extends StatelessWidget {
           child: TextButton(
             style: TextButton.styleFrom(
               backgroundColor: AppColors.branco,
-              foregroundColor: AppColors.marromEscuro,
+              foregroundColor: AppColors.textoPrincipal,
               shape: RoundedRectangleBorder(
                 borderRadius: BorderRadius.circular(6),
               ),

@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 
-/// Paleta oficial do projeto. Use SEMPRE essas cores nas telas,
-/// nunca escreva Color(0xFF...) direto no código da tela.
+/// Paleta oficial do projeto, baseada no Manual de Marca da Rokuzen.
+/// Use SEMPRE essas cores nas telas, nunca escreva Color(0xFF...) direto.
 ///
 /// Precisa de uma cor nova? Adicione aqui (em PR separado)
 /// e avise o grupo.
@@ -9,19 +9,27 @@ class AppColors {
   AppColors._();
 
   // ---------------------------------------------------------------
-  // Marca: verde
+  // Cores principais (manual da marca)
   // ---------------------------------------------------------------
-  static const Color verdeMuitoEscuro = Color(0xFF4E6822);
-  static const Color verdeEscuro = Color(0xFF6E9130); // hover / pressionado
-  static const Color verde = Color(0xFF8FBA42); // cor principal
-  static const Color verdeClaro = Color(0xFFD4E487);
-  static const Color verdeFundo = Color(0xFFEBEDCB); // menu e barra superior
+  static const Color verde = Color(0xFF9AB946);
+  static const Color preto = Color(0xFF000000);
+  static const Color branco = Color(0xFFFFFFFF);
+  static const Color roxo = Color(0xFF500596);
 
   // ---------------------------------------------------------------
-  // Marca: marrom
+  // Cores de apoio (manual da marca)
   // ---------------------------------------------------------------
-  static const Color marromEscuro = Color(0xFF33281F);
-  static const Color marrom = Color(0xFF5C4A3D);
+  static const Color rosa = Color(0xFFFF66C4);
+  static const Color creme = Color(0xFFFCFBF2);
+  static const Color marrom = Color(0xFF694300);
+
+  // ---------------------------------------------------------------
+  // Variações do verde (calculadas a partir do verde oficial)
+  // ---------------------------------------------------------------
+  static const Color verdeMuitoEscuro = Color(0xFF5C6F2A);
+  static const Color verdeEscuro = Color(0xFF7B9438); // hover / pressionado
+  static const Color verdeClaro = Color(0xFFCDDCA2);
+  static const Color verdeFundo = Color(0xFFEBF1DA); // menu e barra superior
 
   // ---------------------------------------------------------------
   // Neutros
@@ -30,12 +38,11 @@ class AppColors {
   static const Color cinza = Color(0xFF857C7A);
   static const Color cinzaClaro = Color(0xFFBDB7B5);
   static const Color cinzaMuitoClaro = Color(0xFFE5E1DF);
-  static const Color branco = Color(0xFFFCFCFC);
 
   // ---------------------------------------------------------------
   // Texto
   // ---------------------------------------------------------------
-  static const Color textoPrincipal = marromEscuro;
+  static const Color textoPrincipal = preto;
   static const Color textoSecundario = cinza;
   static const Color textoDesabilitado = cinzaClaro;
   static const Color textoSobreVerde = branco;
@@ -43,15 +50,15 @@ class AppColors {
   // ---------------------------------------------------------------
   // Fundos e superfícies
   // ---------------------------------------------------------------
-  static const Color fundoConteudo = Color(0xFFF1EDE6); // fundo bege das telas
-  static const Color borda = Color(0xFFC9D98F);
+  static const Color fundoConteudo = creme; // fundo das telas
+  static const Color borda = Color(0xFFD7E3B5);
 
   // ---------------------------------------------------------------
   // Destaques
   // ---------------------------------------------------------------
-  static const Color cardSessao = Color(0xFFF7E68A); // amarelo dos cards
-  static const Color cardSessaoClaro = Color(0xFFFBF3C8);
-  static const Color destaque = Color(0xFFE0602A); // dia selecionado, alertas
+  static const Color cardSessao = verdeClaro;
+  static const Color cardSessaoClaro = verdeFundo;
+  static const Color destaque = roxo; // dia selecionado, itens ativos
 
   // ---------------------------------------------------------------
   // Estados (mensagens, validação de formulário)
