@@ -48,7 +48,7 @@ class AuthLayout extends StatelessWidget {
                       borderRadius: BorderRadius.circular(24),
                       boxShadow: [
                         BoxShadow(
-                          color: AppColors.marromEscuro.withValues(alpha: 0.08),
+                          color: AppColors.preto.withValues(alpha: 0.08),
                           blurRadius: 24,
                           offset: const Offset(0, 8),
                         ),

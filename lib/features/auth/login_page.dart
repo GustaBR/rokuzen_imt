@@ -41,9 +41,9 @@ class _LoginPageState extends State<LoginPage> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            const Text(
+            Text(
               'Bem-Vindo!',
-              style: TextStyle(
+              style: Theme.of(context).textTheme.headlineLarge?.copyWith(
                 fontSize: 36,
                 color: AppColors.textoPrincipal,
               ),
