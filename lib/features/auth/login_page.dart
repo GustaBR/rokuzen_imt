@@ -104,7 +104,7 @@ class _LoginPageState extends State<LoginPage> {
               child: ElevatedButton(
                 onPressed: _entrar,
                 style: ElevatedButton.styleFrom(
-                  backgroundColor: AppColors.fundoConteudo,
+                  backgroundColor: AppColors.verdeFundo,
                   foregroundColor: AppColors.textoPrincipal,
                   elevation: 0,
                   shape: RoundedRectangleBorder(

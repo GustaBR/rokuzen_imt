@@ -19,7 +19,7 @@ class AuthLayout extends StatelessWidget {
       body: LayoutBuilder(
         builder: (context, constraints) {
           if (constraints.maxWidth >= larguraDesktop) {
-            return _desktop();
+            return _desktop(context);
           }
           return _mobile(context);
         },
@@ -27,9 +27,9 @@ class AuthLayout extends StatelessWidget {
     );
   }
 
-    Widget _desktop() {
+  Widget _desktop(BuildContext context) {
     return Container(
-      color: AppColors.branco,
+      color: AppColors.verdeFundo,
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
@@ -44,7 +44,7 @@ class AuthLayout extends StatelessWidget {
                   child: Container(
                     padding: const EdgeInsets.all(56),
                     decoration: BoxDecoration(
-                      color: AppColors.verdeFundo,
+                      color: AppColors.branco,
                       borderRadius: BorderRadius.circular(24),
                       boxShadow: [
                         BoxShadow(
@@ -63,7 +63,21 @@ class AuthLayout extends StatelessWidget {
           // Lado do logo
           Expanded(
             child: Center(
-              child: Image.asset('assets/images/logo.png', width: 460),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Image.asset('assets/images/logo.png', width: 460),
+                  const SizedBox(height: 24),
+                  Text(
+                    'Massagem Terapêutica',
+                    style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                      fontSize: 26,
+                      letterSpacing: 2,
+                      color: AppColors.textoPrincipal,
+                    ),
+                  ),
+                ],
+              ),
             ),
           ),
         ],
@@ -78,7 +92,7 @@ class AuthLayout extends StatelessWidget {
     final espacoBaixo = MediaQuery.paddingOf(context).bottom;
 
     return Container(
-      color: AppColors.branco,
+      color: AppColors.verdeFundo,
       height: double.infinity,
       child: SingleChildScrollView(
         padding: EdgeInsets.fromLTRB(16, 48 + espacoTopo, 16, 24 + espacoBaixo),
@@ -92,7 +106,7 @@ class AuthLayout extends StatelessWidget {
             Container(
               padding: const EdgeInsets.all(24),
               decoration: BoxDecoration(
-                color: AppColors.verdeFundo,
+                color: AppColors.branco,
                 borderRadius: BorderRadius.circular(24),
               ),
               child: formulario,

@@ -39,17 +39,24 @@ class CampoRotulado extends StatelessWidget {
           keyboardType: tipoTeclado,
           validator: validador,
           decoration: InputDecoration(
-            fillColor: AppColors.fundoConteudo,
+            fillColor: AppColors.creme,
             suffixIcon: iconeFinal,
             contentPadding:
                 const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
-            border: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(10),
-              borderSide: BorderSide.none,
-            ),
+            enabledBorder: _borda(AppColors.cinzaClaro),
+            focusedBorder: _borda(AppColors.verde, largura: 2),
+            errorBorder: _borda(AppColors.erro),
+            focusedErrorBorder: _borda(AppColors.erro, largura: 2),
           ),
         ),
       ],
+    );
+  }
+
+  OutlineInputBorder _borda(Color cor, {double largura = 1}) {
+    return OutlineInputBorder(
+      borderRadius: BorderRadius.circular(10),
+      borderSide: BorderSide(color: cor, width: largura),
     );
   }
 }
