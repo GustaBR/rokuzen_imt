@@ -85,20 +85,7 @@ class _LoginPageState extends State<LoginPage> {
                 return null;
               },
             ),
-            Align(
-              alignment: Alignment.centerRight,
-              child: TextButton(
-                onPressed: () {}, // abrir tela de recuperar senha
-                style: TextButton.styleFrom(
-                  foregroundColor: AppColors.textoPrincipal,
-                ),
-                child: const Text(
-                  'Esqueceu sua senha?',
-                  style: TextStyle(fontSize: 13),
-                ),
-              ),
-            ),
-            const SizedBox(height: 20),
+            const SizedBox(height: 32),
             SizedBox(
               height: 56,
               child: ElevatedButton(
