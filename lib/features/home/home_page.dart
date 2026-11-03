@@ -3,15 +3,55 @@ import 'package:flutter/material.dart';
 import '../../core/theme/app_colors.dart';
 import "../agenda/agenda_page.dart";
 
-class HomePage extends StatefulWidget {
-  const HomePage({super.key});
+class HomePage extends StatefulWidget {  
+  final int abaInicial;
+
+  const HomePage({
+    super.key,
+    this.abaInicial = 0,
+  });
 
   @override
   State<HomePage> createState() => _HomePageState();
 }
 
 class _HomePageState extends State<HomePage> {
-  int abaSelecionada = 0;
+  late int abaSelecionada;
+
+  @override
+  void initState() {
+    super.initState();
+    abaSelecionada = widget.abaInicial;
+  }
+  
+
+
+void _abrirAgenda() {
+  Navigator.of(context).push(
+    PageRouteBuilder(
+      pageBuilder: (context, animation, secondaryAnimation) {
+        return const HomePage(abaInicial: 1);
+      },
+      transitionDuration: const Duration(milliseconds: 150),
+      reverseTransitionDuration: const Duration(milliseconds: 150),
+      transitionsBuilder: (context, animation, secondaryAnimation, child) {
+        return FadeTransition(
+          opacity: animation,
+          child: child,
+        );
+      },
+    ),
+  );
+}
+
+
+
+void _selecionarAba(int index) {
+    setState(() {
+      abaSelecionada = index;
+    });
+  }
+  
 
   final List<String> abas = const [
     'Início',
@@ -33,20 +73,20 @@ class _HomePageState extends State<HomePage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: AppColors.fundoConteudo,
-      drawer: _mobile ? _menuLateral() : null,
-      body: SafeArea(
-        child: Column(
-          children: [
-            _cabecalho(),
-            if (!_mobile) _menuAbas(),
-            Expanded(
-              child: _conteudo(),
-            ),
-          ],
+        backgroundColor: AppColors.fundoConteudo,
+        drawer: _mobile ? _menuLateral() : null,
+        body: SafeArea(
+          child: Column(
+            children: [
+              _cabecalho(),
+              if (!_mobile) _menuAbas(),
+              Expanded(
+                child: _conteudo(),
+              ),
+            ],
+          ),
         ),
-      ),
-    );
+      );
   }
 
   Widget _cabecalho() {
@@ -149,14 +189,8 @@ class _HomePageState extends State<HomePage> {
               padding: const EdgeInsets.only(right: 8),
               child: TextButton.icon(
                 onPressed: () {
-                    if (index == 1) {
-                      _abrirAgenda();
-                    } else {
-                      setState(() {
-                        abaSelecionada = index;
-                      });
-                    }
-                  },
+                  _selecionarAba(index);
+                },
                 icon: Icon(
                   icones[index],
                   size: 19,
@@ -182,7 +216,6 @@ class _HomePageState extends State<HomePage> {
       ),
     );
   }
-
 // Menu lateral do Mobile
 
   Widget _menuLateral() {
@@ -204,7 +237,9 @@ class _HomePageState extends State<HomePage> {
                 fit: BoxFit.contain,
               ),
             ),
+
             const SizedBox(height: 12),
+
             ...List.generate(abas.length, (index) {
               final selecionada = abaSelecionada == index;
 
@@ -228,16 +263,14 @@ class _HomePageState extends State<HomePage> {
                   horizontal: 20,
                 ),
                 onTap: () {
-                    Navigator.of(context).pop();
+                  Navigator.of(context).pop();
 
-                    if (index == 1) {
-                      _abrirAgenda();
-                    } else {
-                      setState(() {
-                        abaSelecionada = index;
-                      });
-                    }
-                  },
+                  if (index == 1) {
+                    _abrirAgenda();
+                  } else {
+                    _selecionarAba(index);
+                  }
+                },
               );
             }),
           ],
@@ -246,10 +279,6 @@ class _HomePageState extends State<HomePage> {
     );
   }
 // Função para abrir e fechar a aba agenda
-void _abrirAgenda(){
-  Navigator.of(context).push(MaterialPageRoute(builder: (context) => const AgendaPage(),
-  ));
-}
 
 Widget _cartaoAgendaHoje(bool mobile) {
   return Container(
@@ -308,24 +337,36 @@ Widget _cartaoAgendaHoje(bool mobile) {
   );
 }
 
-
   Widget _conteudo() {
   switch (abaSelecionada) {
     case 0:
-      return LayoutBuilder(
-        builder: (context, constraints) {
-          final mobile = constraints.maxWidth < 700;
+      return _telaInicial();
 
-          return SingleChildScrollView(
-            padding: EdgeInsets.all(mobile ? 16 : 28),
-            child: _cartaoAgendaHoje(mobile),
-          );
-        },
-      );
+    case 1:
+      return const AgendaPage();
+
+    case 2:
+      return const SizedBox.expand();
+
+    case 3:
+      return const SizedBox.expand();
 
     default:
       return const SizedBox.expand();
-   }
   }
+}
+
+  Widget _telaInicial() {
+  return LayoutBuilder(
+    builder: (context, constraints) {
+      final mobile = constraints.maxWidth < 700;
+
+      return SingleChildScrollView(
+        padding: EdgeInsets.all(mobile ? 16 : 28),
+        child: _cartaoAgendaHoje(mobile),
+      );
+    },
+  );
+}
 }
 

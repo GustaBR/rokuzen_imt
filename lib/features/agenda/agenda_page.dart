@@ -10,7 +10,7 @@ class AgendaPage extends StatelessWidget {
       color: AppColors.fundoConteudo,
       width: double.infinity,
       child: const Center(
-        child: Text('Agenda incompleta'),
+        child: Text('Agenda completa'),
       ),
     );
   }
