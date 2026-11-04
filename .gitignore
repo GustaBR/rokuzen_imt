@@ -47,5 +47,8 @@ app.*.map.json
 # dart_frog
 .dart_frog/
 
+# Segredos
+.env
+
 # Outros
 certs/
