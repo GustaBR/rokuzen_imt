@@ -1,20 +1,260 @@
 import 'package:flutter/material.dart';
-import '../../shared/widgets/base_layout.dart';
+import 'package:go_router/go_router.dart';
+import '../../core/theme/app_colors.dart';
 
-class HomePage extends StatelessWidget {
-  const HomePage({super.key});
+
+class HomePage extends StatefulWidget {
+  final Widget child;
+
+  const HomePage({
+    super.key,
+    required this.child,
+  });
+
+  @override
+  State<HomePage> createState() => _HomePageState();
+}
+
+class _HomePageState extends State<HomePage> {
+
+void _selecionarAba(int index) {
+  context.go(caminhos[index]);
+}
+  
+
+  final List<String> abas = const [
+    'Início',
+    'Agenda',
+    'Cadastrar Paciente',
+    'Histórico de consultas',
+  ];
+
+  final List<IconData> icones = const [
+    Icons.home_outlined,
+    Icons.calendar_month_outlined,
+    Icons.people_outline,
+    Icons.assignment_outlined,
+  ];
+
+  final List<String> caminhos = const [
+  '/',
+  '/agenda',
+  '/pacientes/novo',
+  '/historico',
+];
+
+
+  bool get _mobile =>
+      MediaQuery.of(context).size.width < 600;
 
   @override
   Widget build(BuildContext context) {
-    return BaseLayout(
-      itensMenu: [
-        ItemMenu(titulo: 'Opção 1', aoClicar: () {}),
-        ItemMenu(titulo: 'Opção 2', aoClicar: () {}),
-        ItemMenu(titulo: 'Opção 3', aoClicar: () {}),
-      ],
-      corpo: const Center(
-        child: Text('Conteúdo da tela aqui'),
+    return Scaffold(
+        backgroundColor: AppColors.fundoConteudo,
+        drawer: _mobile ? _menuLateral() : null,
+        body: SafeArea(
+          child: Column(
+            children: [
+              _cabecalho(),
+              if (!_mobile) _menuAbas(),
+              Expanded(
+                child: _conteudo(),
+              ),
+            ],
+          ),
+        ),
+      );
+  }
+
+  Widget _cabecalho() {
+    return Container(
+      height: 76,
+      padding: EdgeInsets.symmetric(
+        horizontal: _mobile ? 12 : 24,
+      ),
+      decoration: const BoxDecoration(
+        color: AppColors.verdeFundo,
+        border: Border(
+          bottom: BorderSide(color: AppColors.borda),
+        ),
+      ),
+      child: _mobile
+    ? Stack(
+        alignment: Alignment.center,
+        children: [
+          Align(
+            alignment: Alignment.centerLeft,
+            child: Builder(
+              builder: (context) => IconButton(
+                tooltip: 'Abrir menu',
+                onPressed: () =>
+                    Scaffold.of(context).openDrawer(),
+                icon: const Icon(
+                  Icons.menu,
+                  color: AppColors.marrom,
+                  size: 28,
+                ),
+              ),
+            ),
+          ),
+          Center(
+            child: Image.asset(
+              'assets/images/logo.png',
+              width: 155,
+              height: 62,
+              fit: BoxFit.contain,
+            ),
+          ),
+          Align(
+            alignment: Alignment.centerRight,
+            child: IconButton(
+              tooltip: 'Perfil',
+              onPressed: () {},
+              icon: const Icon(
+                Icons.person_outline,
+                color: AppColors.cinza,
+                size: 28,
+              ),
+            ),
+          ),
+        ],
+      )
+    : Row(
+        children: [
+          Image.asset(
+            'assets/images/logo.png',
+            width: 190,
+            height: 62,
+            fit: BoxFit.contain,
+            alignment: Alignment.centerLeft,
+          ),
+          const Spacer(),
+          IconButton(
+            tooltip: 'Perfil',
+            onPressed: () {},
+            icon: const Icon(
+              Icons.person_outline,
+              color: AppColors.cinza,
+              size: 28,
+            ),
+          ),
+        ],
       ),
     );
   }
+
+  Widget _menuAbas() {
+    return Container(
+      width: double.infinity,
+      decoration: const BoxDecoration(
+        color: AppColors.fundoConteudo,
+        border: Border(
+          bottom: BorderSide(color: AppColors.borda),
+        ),
+      ),
+      child: SingleChildScrollView(
+        scrollDirection: Axis.horizontal,
+        padding: const EdgeInsets.symmetric(
+          horizontal: 24,
+          vertical: 10,
+        ),
+        child: Row(
+          children: List.generate(abas.length, (index) {
+            final selecionada =
+              GoRouterState.of(context).uri.path == caminhos[index];
+
+            return Padding(
+              padding: const EdgeInsets.only(right: 8),
+              child: TextButton.icon(
+                onPressed: () {
+                  _selecionarAba(index);
+                },
+                icon: Icon(
+                  icones[index],
+                  size: 19,
+                ),
+                label: Text(abas[index]),
+                style: TextButton.styleFrom(
+                  foregroundColor: AppColors.marrom,
+                  backgroundColor: selecionada
+                      ? AppColors.verdeFundo
+                      : Colors.transparent,
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 20,
+                    vertical: 14,
+                  ),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                ),
+              ),
+            );
+          }),
+        ),
+      ),
+    );
+  }
+// Menu lateral do Mobile
+
+  Widget _menuLateral() {
+    return Drawer(
+      backgroundColor: AppColors.fundoConteudo,
+      child: SafeArea(
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            Container(
+              height: 110,
+              width: double.infinity,
+              padding: const EdgeInsets.all(16),
+              color: AppColors.verdeFundo,
+              alignment: Alignment.center,
+              child: Image.asset(
+                'assets/images/logo.png',
+                width: 180,
+                fit: BoxFit.contain,
+              ),
+            ),
+
+            const SizedBox(height: 12),
+
+            ...List.generate(abas.length, (index) {
+              final selecionada =
+                GoRouterState.of(context).uri.path == caminhos[index];
+
+              return ListTile(
+                leading: Icon(
+                  icones[index],
+                  color: AppColors.marrom,
+                ),
+                title: Text(
+                  abas[index],
+                  style: const TextStyle(
+                    color: AppColors.marrom,
+                  ),
+                ),
+                selected: selecionada,
+                selectedTileColor: AppColors.verdeFundo,
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                contentPadding: const EdgeInsets.symmetric(
+                  horizontal: 20,
+                ),
+                onTap: () {
+                  Navigator.of(context).pop();
+                  _selecionarAba(index);
+                },
+              );
+            }),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _conteudo() {
+    return widget.child;
+  }
 }
+
