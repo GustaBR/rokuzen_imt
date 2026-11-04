@@ -1,14 +1,14 @@
-
 import 'package:flutter/material.dart';
+import 'package:go_router/go_router.dart';
 import '../../core/theme/app_colors.dart';
-import "../agenda/agenda_page.dart";
 
-class HomePage extends StatefulWidget {  
-  final int abaInicial;
+
+class HomePage extends StatefulWidget {
+  final Widget child;
 
   const HomePage({
     super.key,
-    this.abaInicial = 0,
+    required this.child,
   });
 
   @override
@@ -16,41 +16,10 @@ class HomePage extends StatefulWidget {
 }
 
 class _HomePageState extends State<HomePage> {
-  late int abaSelecionada;
-
-  @override
-  void initState() {
-    super.initState();
-    abaSelecionada = widget.abaInicial;
-  }
-  
-
-
-void _abrirAgenda() {
-  Navigator.of(context).push(
-    PageRouteBuilder(
-      pageBuilder: (context, animation, secondaryAnimation) {
-        return const HomePage(abaInicial: 1);
-      },
-      transitionDuration: const Duration(milliseconds: 150),
-      reverseTransitionDuration: const Duration(milliseconds: 150),
-      transitionsBuilder: (context, animation, secondaryAnimation, child) {
-        return FadeTransition(
-          opacity: animation,
-          child: child,
-        );
-      },
-    ),
-  );
-}
-
-
 
 void _selecionarAba(int index) {
-    setState(() {
-      abaSelecionada = index;
-    });
-  }
+  context.go(caminhos[index]);
+}
   
 
   final List<String> abas = const [
@@ -66,6 +35,14 @@ void _selecionarAba(int index) {
     Icons.people_outline,
     Icons.assignment_outlined,
   ];
+
+  final List<String> caminhos = const [
+  '/',
+  '/agenda',
+  '/pacientes/novo',
+  '/historico',
+];
+
 
   bool get _mobile =>
       MediaQuery.of(context).size.width < 600;
@@ -183,7 +160,8 @@ void _selecionarAba(int index) {
         ),
         child: Row(
           children: List.generate(abas.length, (index) {
-            final selecionada = abaSelecionada == index;
+            final selecionada =
+              GoRouterState.of(context).uri.path == caminhos[index];
 
             return Padding(
               padding: const EdgeInsets.only(right: 8),
@@ -241,7 +219,8 @@ void _selecionarAba(int index) {
             const SizedBox(height: 12),
 
             ...List.generate(abas.length, (index) {
-              final selecionada = abaSelecionada == index;
+              final selecionada =
+                GoRouterState.of(context).uri.path == caminhos[index];
 
               return ListTile(
                 leading: Icon(
@@ -264,12 +243,7 @@ void _selecionarAba(int index) {
                 ),
                 onTap: () {
                   Navigator.of(context).pop();
-
-                  if (index == 1) {
-                    _abrirAgenda();
-                  } else {
-                    _selecionarAba(index);
-                  }
+                  _selecionarAba(index);
                 },
               );
             }),
@@ -278,95 +252,9 @@ void _selecionarAba(int index) {
       ),
     );
   }
-// Função para abrir e fechar a aba agenda
-
-Widget _cartaoAgendaHoje(bool mobile) {
-  return Container(
-    width: double.infinity,
-    padding: EdgeInsets.all(mobile ? 16 : 24),
-    decoration: BoxDecoration(
-      color: Colors.white,
-      borderRadius: BorderRadius.circular(16),
-      border: Border.all(color: AppColors.borda),
-    ),
-    child: Wrap(
-      alignment: WrapAlignment.spaceBetween,
-      crossAxisAlignment: WrapCrossAlignment.center,
-      spacing: 12,
-      runSpacing: 12,
-      children: [
-        Row(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            const Icon(
-              Icons.calendar_month_outlined,
-              color: AppColors.marrom,
-              size: 28,
-            ),
-            const SizedBox(width: 12),
-            Text(
-              'Agenda de hoje',
-              style: TextStyle(
-                color: AppColors.marrom,
-                fontSize: mobile ? 20 : 24,
-                fontWeight: FontWeight.bold,
-              ),
-            ),
-          ],
-        ),
-
-// Botão para abrir a aba agenda
-        TextButton.icon(
-          onPressed: _abrirAgenda,
-          icon: const Icon(Icons.arrow_forward, size: 18),
-          label: const Text('Ver agenda completa'),
-          style: TextButton.styleFrom(
-            foregroundColor: AppColors.marrom,
-            backgroundColor: AppColors.verdeFundo,
-            padding: const EdgeInsets.symmetric(
-              horizontal: 16,
-              vertical: 12,
-            ),
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(10),
-            ),
-          ),
-        ),
-      ],
-    ),
-  );
-}
 
   Widget _conteudo() {
-  switch (abaSelecionada) {
-    case 0:
-      return _telaInicial();
-
-    case 1:
-      return const AgendaPage();
-
-    case 2:
-      return const SizedBox.expand();
-
-    case 3:
-      return const SizedBox.expand();
-
-    default:
-      return const SizedBox.expand();
+    return widget.child;
   }
-}
-
-  Widget _telaInicial() {
-  return LayoutBuilder(
-    builder: (context, constraints) {
-      final mobile = constraints.maxWidth < 700;
-
-      return SingleChildScrollView(
-        padding: EdgeInsets.all(mobile ? 16 : 28),
-        child: _cartaoAgendaHoje(mobile),
-      );
-    },
-  );
-}
 }
 
