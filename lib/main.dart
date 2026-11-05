@@ -1,4 +1,4 @@
-
+import 'features/auth/login_page.dart';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'core/theme/app_theme.dart';
@@ -12,8 +12,12 @@ import 'features/historico/historico_page.dart';
 // transição de fade nas páginas (transitionDuration: 100ms, reverseTransitionDuration: 100ms)
 
 final GoRouter _router = GoRouter(
-  initialLocation: '/',
+  initialLocation: '/login',
   routes: [
+    GoRoute(
+      path: '/login',
+      builder: (context, state) => const LoginPage(),
+    ),
     ShellRoute(
       builder: (context, state, child) {
         return HomePage(child: child);
