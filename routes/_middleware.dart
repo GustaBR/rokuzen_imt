@@ -14,7 +14,28 @@ Handler middleware(Handler handler) {
     password: env['DB_PASSWORD']!,
   ).createPool();
 
-  return handler.use(
-    provider<MySQLConnectionPool>((context) => pool)
-  );
+   return handler
+      .use(provider<MySQLConnectionPool>((context) => pool))
+      .use(_cors());
+
 }
+
+Middleware _cors() {
+  return (handler) {
+    return (context) async {
+      if (context.request.method == HttpMethod.options) {
+        return Response(headers: _cabecalhosCors);
+      }
+      final response = await handler(context);
+      return response.copyWith(
+        headers: {...response.headers, ..._cabecalhosCors},
+      );
+    };
+  };
+}
+
+const _cabecalhosCors = {
+  'Access-Control-Allow-Origin': '*',
+  'Access-Control-Allow-Methods': 'GET, POST, OPTIONS',
+  'Access-Control-Allow-Headers': 'Context-Type, Authorization',
+};
