@@ -14,14 +14,17 @@ import 'features/historico/historico_page.dart';
 final GoRouter _router = GoRouter(
   initialLocation: '/login',
   routes: [
+    GoRoute(
+      path: '/login',
+      builder: (context, state) => const LoginPage(),
+    ),
     ShellRoute(
       builder: (context, state, child) {
         return HomePage(child: child);
       },
       routes: [
         GoRoute(
-          path: '/login',
-          builder: (context, state) => const LoginPage(),
+          path: '/',
           pageBuilder: (context, state) {
             return CustomTransitionPage(
               key: state.pageKey,
