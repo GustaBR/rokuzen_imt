@@ -1,5 +1,4 @@
 import 'dart:io';
-
 import 'package:mysql_dart/mysql_dart.dart';
 
 class DatabaseConnection {
@@ -22,10 +21,6 @@ class DatabaseConnection {
   MySQLConnectionPool createPool() {
     final securityContext = SecurityContext(
       withTrustedRoots: true,
-    );
-
-    securityContext.setTrustedCertificates(
-      'certs/ca.pem',
     );
 
     return MySQLConnectionPool(

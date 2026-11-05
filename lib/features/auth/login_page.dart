@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import '../../core/theme/app_colors.dart';
 import '../../shared/widgets/auth_layout.dart';
-import '../home/home_page.dart';
+import 'package:go_router/go_router.dart';
 import 'widgets/campo_rotulado.dart';
 
 class LoginPage extends StatefulWidget {
@@ -28,9 +28,7 @@ class _LoginPageState extends State<LoginPage> {
     if (!_formKey.currentState!.validate()) return;
 
     // chamar api de login, o back-end responde se é colaborador ou terapeuta
-    Navigator.of(context).pushReplacement(
-      MaterialPageRoute(builder: (_) => const HomePage()),
-    );
+    context.go('/');
   }
 
   @override
