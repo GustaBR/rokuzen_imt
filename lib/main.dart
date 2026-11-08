@@ -6,9 +6,10 @@ import 'features/home/home_page.dart';
 import 'features/home/inicio_page.dart';
 import 'features/agenda/agenda_page.dart';
 import 'features/historico/historico_page.dart';
+import 'features/pacientes/cadastrar_paciente_page.dart';
 
 
-// Código das rotas (Inicio, Agenda, CadstrarPac e Hist. de consultas)
+// Código das rotas (Inicio, Agenda, CadastrarPac e Hist. de consultas)
 // transição de fade nas páginas (transitionDuration: 100ms, reverseTransitionDuration: 100ms)
 
 final GoRouter _router = GoRouter(
@@ -64,7 +65,7 @@ final GoRouter _router = GoRouter(
           pageBuilder: (context, state) {
             return CustomTransitionPage(
               key: state.pageKey,
-              child: const SizedBox.expand(),
+              child: const CadastrarPacientePage(),
               transitionDuration: const Duration(milliseconds: 100),
               reverseTransitionDuration: const Duration(milliseconds: 100),
               transitionsBuilder:
