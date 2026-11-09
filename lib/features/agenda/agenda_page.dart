@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'widgets/grade_horarios.dart';
 
 import '../../core/theme/app_colors.dart';
 import 'agenda_service.dart';
@@ -125,7 +126,7 @@ class _AgendaPageState extends State<AgendaPage> {
     );
   }
 
-  Widget _conteudo() {
+    Widget _conteudo() {
     if (_carregando) {
       return const Center(child: CircularProgressIndicator());
     }
@@ -138,14 +139,27 @@ class _AgendaPageState extends State<AgendaPage> {
     final dados = _dados;
     if (dados == null) return const SizedBox.shrink();
 
-    return ListView(
-      padding: const EdgeInsets.all(16),
-      children: [
-        for (var i = 0; i < _quantidadeDias; i++)
-          _secaoDoDia(_inicio.add(Duration(days: i)), dados),
-      ],
+    final dias = [
+      for (var i = 0; i < _quantidadeDias; i++) _inicio.add(Duration(days: i)),
+    ];
+
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        // Celular: lista de cartões. Computador: grade de horários.
+        if (constraints.maxWidth < 700) {
+          return ListView(
+            padding: const EdgeInsets.all(16),
+            children: [for (final dia in dias) _secaoDoDia(dia, dados)],
+          );
+        }
+        return Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 16),
+          child: GradeHorarios(dias: dias, dados: dados),
+        );
+      },
     );
   }
+
 
   Widget _secaoDoDia(DateTime dia, AgendaDados dados) {
     final atendimentos =
