@@ -51,9 +51,23 @@ Future<Response> onRequest(RequestContext context) async {
   }
 
   final email = _texto(dados['email']);
-  final genero = _texto(dados['genero']);
+
+  final generoInformado = _texto(dados['genero']);
+  final genero = switch (generoInformado) {
+    'Feminino' => 'F',
+    'Masculino' => 'M',
+    _ => '',
+  };
+
   final cpf = _texto(dados['cpf']).replaceAll(RegExp(r'[^0-9]'), '');
   final observacoes = _texto(dados['observacoes']);
+  final cep = _texto(dados['cep']);
+  final rua = _texto(dados['rua']);
+  final numero = _texto(dados['numero']);
+  final complemento = _texto(dados['complemento']);
+  final bairro = _texto(dados['bairro']);
+  final cidade = _texto(dados['cidade']);
+  final uf = _texto(dados['uf']);
 
   if (email.length > 150 ||
       genero.length > 2 ||
@@ -68,42 +82,63 @@ Future<Response> onRequest(RequestContext context) async {
     final id = await _gerarIdUnico(pool);
 
     await pool.execute(
-      '''
-      INSERT INTO cli (
-        cli_ukey,
-        cli_001_c,
-        cli_004_c,
-        cli_010_c,
-        cli_012_c,
-        cli_017_c,
-        cli_039_c,
-        cli_040_c
-      ) VALUES (
-        :id,
-        :email,
-        :nome,
-        :genero,
-        :telefone,
-        :nascimento,
-        :observacoes,
-        :cpf
-      )
-      ''',
-      {
-        'id': id,
-        'email': email.isEmpty ? null : email,
-        'nome': nome,
-        'genero': genero.isEmpty ? null : genero,
-        'telefone': telefone,
-        'nascimento': DateTime(
-          nascimento.year,
-          nascimento.month,
-          nascimento.day,
-        ),
-        'observacoes': observacoes.isEmpty ? null : observacoes,
-        'cpf': cpf.isEmpty ? null : cpf,
-      },
-    );
+  '''
+  INSERT INTO cli (
+    cli_ukey,
+    cli_001_c,
+    cli_004_c,
+    cli_010_c,
+    cli_012_c,
+    cli_017_c,
+    cli_039_c,
+    cli_040_c,
+    cli_041_c,
+    cli_042_c,
+    cli_043_c,
+    cli_044_c,
+    cli_045_c,
+    cli_046_c,
+    cli_047_c
+  ) VALUES (
+    :id,
+    :email,
+    :nome,
+    :genero,
+    :telefone,
+    :nascimento,
+    :observacoes,
+    :cpf,
+    :rua,
+    :numero,
+    :complemento,
+    :bairro,
+    :cidade,
+    :uf,
+    :cep
+  )
+  ''',
+  {
+    'id': id,
+    'email': email.isEmpty ? null : email,
+    'nome': nome,
+    'genero': genero.isEmpty ? null : genero,
+    'telefone': telefone,
+    'nascimento': DateTime(
+      nascimento.year,
+      nascimento.month,
+      nascimento.day,
+    ),
+    'observacoes': observacoes.isEmpty ? null : observacoes,
+    'cpf': cpf.isEmpty ? null : cpf,
+    'rua': rua.isEmpty ? null : rua,
+    'numero': numero.isEmpty ? null : numero,
+    'complemento': complemento.isEmpty ? null : complemento,
+    'bairro': bairro.isEmpty ? null : bairro,
+    'cidade': cidade.isEmpty ? null : cidade,
+    'uf': uf.isEmpty ? null : uf,
+    'cep': cep.isEmpty ? null : cep,
+  },
+);
 
     return Response.json(
       statusCode: HttpStatus.created,

@@ -18,6 +18,7 @@ class HomePage extends StatefulWidget {
 class _HomePageState extends State<HomePage> {
 
 void _selecionarAba(int index) {
+  ScaffoldMessenger.of(context).hideCurrentSnackBar();
   context.go(caminhos[index]);
 }
   
@@ -257,4 +258,3 @@ void _selecionarAba(int index) {
     return widget.child;
   }
 }
-
