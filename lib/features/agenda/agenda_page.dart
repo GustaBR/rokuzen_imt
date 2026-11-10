@@ -1,10 +1,13 @@
 import 'package:flutter/material.dart';
-import 'widgets/grade_horarios.dart';
 
 import '../../core/theme/app_colors.dart';
 import 'agenda_service.dart';
+import 'datas.dart';
+import 'widgets/faixa_semana.dart';
+import 'widgets/lista_do_dia.dart';
+import 'widgets/proximos_atendimentos.dart';
+import 'widgets/grade_horarios.dart';
 
-enum _Visao { dia, semana }
 
 class AgendaPage extends StatefulWidget {
   const AgendaPage({super.key});
@@ -15,11 +18,13 @@ class AgendaPage extends StatefulWidget {
 
 class _AgendaPageState extends State<AgendaPage> {
   final _service = AgendaService();
-  _Visao _visao = _Visao.dia;
-  DateTime _data = _soData(DateTime.now());
+  DateTime _diaSelecionado = soData(DateTime.now());
   bool _carregando = false;
   String? _erro;
   AgendaDados? _dados;
+  bool _verSemana = false;
+
+  DateTime get _inicioSemana => inicioDaSemana(_diaSelecionado);
 
   @override
   void initState() {
@@ -27,13 +32,7 @@ class _AgendaPageState extends State<AgendaPage> {
     _carregar();
   }
 
-  /// Visão Dia: o próprio dia. Visão Semana: a segunda-feira da semana.
-  DateTime get _inicio => _visao == _Visao.dia
-      ? _data
-      : _data.subtract(Duration(days: _data.weekday - 1));
-
-  int get _quantidadeDias => _visao == _Visao.dia ? 1 : 7;
-
+  /// Carrega a semana inteira de uma vez (segunda a domingo).
   Future<void> _carregar() async {
     setState(() {
       _carregando = true;
@@ -42,8 +41,8 @@ class _AgendaPageState extends State<AgendaPage> {
 
     try {
       final dados = await _service.buscar(
-        _inicio,
-        _inicio.add(Duration(days: _quantidadeDias)),
+        _inicioSemana,
+        _inicioSemana.add(const Duration(days: 7)),
       );
       if (!mounted) return;
       setState(() => _dados = dados);
@@ -55,207 +54,230 @@ class _AgendaPageState extends State<AgendaPage> {
     }
   }
 
-  /// direcao = -1 volta, 1 avança (um dia ou uma semana).
-  void _mudarPeriodo(int direcao) {
+  /// direcao = -1 volta uma semana, 1 avança uma semana.
+  void _mudarSemana(int direcao) {
     setState(() {
-      _data = _data.add(Duration(days: _quantidadeDias * direcao));
+      _diaSelecionado = _diaSelecionado.add(Duration(days: 7 * direcao));
     });
     _carregar();
   }
 
   void _irParaHoje() {
-    setState(() => _data = _soData(DateTime.now()));
+    setState(() => _diaSelecionado = soData(DateTime.now()));
     _carregar();
   }
 
-  void _mudarVisao(_Visao visao) {
-    setState(() => _visao = visao);
-    _carregar();
+  /// Trocar de dia dentro da mesma semana não precisa buscar de novo.
+  void _selecionarDia(DateTime dia) {
+    setState(() {
+      _diaSelecionado = dia;
+      _verSemana = false;
+    });
   }
 
   @override
   Widget build(BuildContext context) {
     return Container(
       color: AppColors.fundoConteudo,
-      child: Column(
-        children: [
-          _cabecalho(),
-          Expanded(child: _conteudo()),
-        ],
-      ),
-    );
-  }
+      child: LayoutBuilder(
+        builder: (context, constraints) {
+          final largo = constraints.maxWidth >= 900;
 
-  Widget _cabecalho() {
-    return Padding(
-      padding: const EdgeInsets.fromLTRB(16, 16, 16, 8),
-      child: Wrap(
-        alignment: WrapAlignment.spaceBetween,
-        crossAxisAlignment: WrapCrossAlignment.center,
-        spacing: 12,
-        runSpacing: 12,
-        children: [
-          Row(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              IconButton(
-                onPressed: () => _mudarPeriodo(-1),
-                icon: const Icon(Icons.chevron_left),
-              ),
-              Text(
-                _tituloPeriodo(),
-                style: Theme.of(context).textTheme.titleLarge,
-              ),
-              IconButton(
-                onPressed: () => _mudarPeriodo(1),
-                icon: const Icon(Icons.chevron_right),
-              ),
-              TextButton(onPressed: _irParaHoje, child: const Text('Hoje')),
-            ],
-          ),
-          SegmentedButton<_Visao>(
-            segments: const [
-              ButtonSegment(value: _Visao.dia, label: Text('Dia')),
-              ButtonSegment(value: _Visao.semana, label: Text('Semana')),
-            ],
-            selected: {_visao},
-            onSelectionChanged: (selecao) => _mudarVisao(selecao.first),
-          ),
-        ],
-      ),
-    );
-  }
-
-    Widget _conteudo() {
-    if (_carregando) {
-      return const Center(child: CircularProgressIndicator());
-    }
-    if (_erro != null) {
-      return Center(
-        child: Text(_erro!, style: const TextStyle(color: AppColors.erro)),
-      );
-    }
-
-    final dados = _dados;
-    if (dados == null) return const SizedBox.shrink();
-
-    final dias = [
-      for (var i = 0; i < _quantidadeDias; i++) _inicio.add(Duration(days: i)),
-    ];
-
-    return LayoutBuilder(
-      builder: (context, constraints) {
-        // Celular: lista de cartões. Computador: grade de horários.
-        if (constraints.maxWidth < 700) {
-          return ListView(
-            padding: const EdgeInsets.all(16),
-            children: [for (final dia in dias) _secaoDoDia(dia, dados)],
-          );
-        }
-        return Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 16),
-          child: GradeHorarios(dias: dias, dados: dados),
-        );
-      },
-    );
-  }
-
-
-  Widget _secaoDoDia(DateTime dia, AgendaDados dados) {
-    final atendimentos =
-        dados.atendimentos.where((a) => _mesmoDia(a.inicio, dia)).toList();
-    final turnos = dados.turnos.where((t) => _mesmoDia(t.inicio, dia)).toList();
-
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        // Na visão semanal, cada dia ganha um título
-        if (_visao == _Visao.semana)
-          Padding(
-            padding: const EdgeInsets.only(top: 16, bottom: 8),
-            child: Text(
-              _formatarDia(dia),
-              style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w600),
+          return SingleChildScrollView(
+            padding: EdgeInsets.all(largo ? 28 : 16),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                _titulo(),
+                const SizedBox(height: 20),
+                // Computador: lado a lado. Celular: um embaixo do outro.
+                if (largo)
+                  Row(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Expanded(flex: 2, child: _painelAgenda()),
+                      const SizedBox(width: 20),
+                      Expanded(child: ProximosAtendimentos(dados: _dados)),
+                    ],
+                  )
+                else ...[
+                  _painelAgenda(),
+                  const SizedBox(height: 16),
+                  ProximosAtendimentos(dados: _dados),
+                ],
+              ],
             ),
+          );
+        },
+      ),
+    );
+  }
+
+  Widget _titulo() {
+    return Row(
+      children: [
+        Container(
+          padding: const EdgeInsets.all(10),
+          decoration: BoxDecoration(
+            color: AppColors.verdeFundo,
+            borderRadius: BorderRadius.circular(12),
           ),
-        Padding(
-          padding: const EdgeInsets.only(bottom: 8),
-          child: Text(
-            turnos.isEmpty
-                ? 'Sem escala neste dia'
-                : turnos.map(_textoTurno).join('  ·  '),
-            style: const TextStyle(color: AppColors.textoSecundario),
+          child: const Icon(Icons.calendar_month_outlined),
+        ),
+        const SizedBox(width: 14),
+        Expanded(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                'Agenda completa',
+                style: Theme.of(context).textTheme.headlineSmall,
+              ),
+              const Text(
+                'Visualize seus atendimentos da semana',
+                style: TextStyle(color: AppColors.textoSecundario),
+              ),
+            ],
           ),
         ),
-        if (atendimentos.isEmpty)
-          const Padding(
-            padding: EdgeInsets.only(bottom: 12),
-            child: Text('Nenhuma sessão marcada'),
-          )
-        else
-          for (final atendimento in atendimentos) _cartao(atendimento),
       ],
     );
   }
 
-  Widget _cartao(Atendimento atendimento) {
-    final horario = atendimento.fim == null
-        ? _hora(atendimento.inicio)
-        : '${_hora(atendimento.inicio)} – ${_hora(atendimento.fim!)}';
+  Widget _painelAgenda() {
+    final dados = _dados;
 
     return Container(
-      width: double.infinity,
-      margin: const EdgeInsets.only(bottom: 12),
-      padding: const EdgeInsets.all(16),
+      padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
-        color: AppColors.cardSessao,
-        borderRadius: BorderRadius.circular(12),
+        color: AppColors.branco,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: AppColors.borda),
       ),
       child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
+        crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          Text(
-            '${atendimento.cliente} - ${atendimento.servico}',
-            style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w600),
-          ),
-          const SizedBox(height: 4),
-          Text(horario),
+          _navegacaoSemana(),
+          const SizedBox(height: 16),
+          if (_carregando)
+            const Padding(
+              padding: EdgeInsets.all(40),
+              child: Center(child: CircularProgressIndicator()),
+            )
+          else if (_erro != null)
+            Padding(
+              padding: const EdgeInsets.all(40),
+              child: Center(
+                child: Text(_erro!, style: const TextStyle(color: AppColors.erro)),
+              ),
+            )
+          else if (dados != null) ...[
+                        FaixaSemana(
+              inicioSemana: _inicioSemana,
+              // Na visão Semana nenhum dia fica destacado
+              diaSelecionado: _verSemana ? DateTime(0) : _diaSelecionado,
+              dados: dados,
+              aoSelecionar: _selecionarDia,
+            ),
+            const SizedBox(height: 16),
+            Align(
+              alignment: Alignment.centerRight,
+              child: SegmentedButton<bool>(
+                segments: const [
+                  ButtonSegment(value: false, label: Text('Dia')),
+                  ButtonSegment(value: true, label: Text('Semana')),
+                ],
+                selected: {_verSemana},
+                onSelectionChanged: (selecao) {
+                  setState(() => _verSemana = selecao.first);
+                },
+              ),
+            ),
+            const SizedBox(height: 16),
+                        // Semana no computador: grade com os 7 dias lado a lado
+            if (_verSemana && MediaQuery.sizeOf(context).width >= 700)
+              SizedBox(
+                height: 640,
+                child: GradeHorarios(
+                  dias: [
+                    for (var i = 0; i < 7; i++)
+                      _inicioSemana.add(Duration(days: i)),
+                  ],
+                  dados: dados,
+                ),
+              )
+            // Semana no celular: lista agrupada por dia
+            else if (_verSemana)
+              ..._listaDaSemana(dados)
+            else
+              ListaDoDia(dia: _diaSelecionado, dados: dados),
+
+
+          ],
         ],
       ),
     );
   }
 
-  String _tituloPeriodo() {
-    if (_visao == _Visao.dia) return _formatarDia(_data);
-    final ultimo = _inicio.add(const Duration(days: 6));
-    return '${_inicio.day}/${_inicio.month} – ${ultimo.day}/${ultimo.month}';
+    /// Todos os dias da semana que têm atendimento, um embaixo do outro.
+  List<Widget> _listaDaSemana(AgendaDados dados) {
+    final diasComAtendimento = [
+      for (var i = 0; i < 7; i++) _inicioSemana.add(Duration(days: i)),
+    ].where((dia) => dados.atendimentos.any((a) => mesmoDia(a.inicio, dia))).toList();
+
+    if (diasComAtendimento.isEmpty) {
+      return const [
+        Padding(
+          padding: EdgeInsets.symmetric(vertical: 24),
+          child: Center(
+            child: Text(
+              'Nenhum atendimento nesta semana',
+              style: TextStyle(color: AppColors.textoSecundario),
+            ),
+          ),
+        ),
+      ];
+    }
+
+    return [
+      for (var i = 0; i < diasComAtendimento.length; i++) ...[
+        if (i > 0) const Divider(height: 32),
+        ListaDoDia(dia: diasComAtendimento[i], dados: dados),
+      ],
+    ];
   }
 
-  String _textoTurno(Turno turno) {
-    final fim = turno.fim == null ? '?' : _hora(turno.fim!);
-    return 'Turno: ${_hora(turno.inicio)} – $fim';
+
+  Widget _navegacaoSemana() {
+    return Row(
+      children: [
+        IconButton.outlined(
+          onPressed: () => _mudarSemana(-1),
+          icon: const Icon(Icons.chevron_left),
+        ),
+        Expanded(
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              const Icon(Icons.calendar_today_outlined, size: 18),
+              const SizedBox(width: 8),
+              Flexible(
+                child: Text(
+                  periodoDaSemana(_inicioSemana),
+                  overflow: TextOverflow.ellipsis,
+                  style: const TextStyle(fontWeight: FontWeight.w600),
+                ),
+              ),
+            ],
+          ),
+        ),
+        IconButton.outlined(
+          onPressed: () => _mudarSemana(1),
+          icon: const Icon(Icons.chevron_right),
+        ),
+        const SizedBox(width: 8),
+        OutlinedButton(onPressed: _irParaHoje, child: const Text('Hoje')),
+      ],
+    );
   }
 }
-
-// ----- Funções de data -----
-
-const _diasDaSemana = [
-  'segunda', 'terça', 'quarta', 'quinta', 'sexta', 'sábado', 'domingo',
-];
-
-const _meses = [
-  'janeiro', 'fevereiro', 'março', 'abril', 'maio', 'junho',
-  'julho', 'agosto', 'setembro', 'outubro', 'novembro', 'dezembro',
-];
-
-DateTime _soData(DateTime data) => DateTime(data.year, data.month, data.day);
-
-bool _mesmoDia(DateTime a, DateTime b) =>
-    a.year == b.year && a.month == b.month && a.day == b.day;
-
-String _formatarDia(DateTime data) =>
-    '${_diasDaSemana[data.weekday - 1]}, ${data.day} de ${_meses[data.month - 1]}';
-
-String _hora(DateTime data) =>
-    '${data.hour.toString().padLeft(2, '0')}:'
-    '${data.minute.toString().padLeft(2, '0')}';
