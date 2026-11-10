@@ -11,12 +11,14 @@ class Atendimento {
   final DateTime? fim;
   final String cliente;
   final String servico;
+  final String? clienteId;
 
   const Atendimento({
     required this.inicio,
     required this.fim,
     required this.cliente,
     required this.servico,
+    required this.clienteId,
   });
 
   factory Atendimento.fromJson(Map<String, dynamic> json) {
@@ -25,6 +27,7 @@ class Atendimento {
       fim: json['fim'] == null ? null : DateTime.parse(json['fim'] as String),
       cliente: json['cliente'] as String? ?? 'Cliente não inforamado',
       servico: _limparNomeServico(json['servico'] as String? ?? ''),
+      clienteId: json['clienteId'] as String?,
     );
   }
 }

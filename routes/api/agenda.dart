@@ -31,6 +31,7 @@ Future<Response> onRequest(RequestContext context) async {
         DATE_FORMAT(a.atd_002_c, '%Y-%m-%dT%H:%i:%s') AS inicio,
         DATE_FORMAT(a.atd_003_c, '%Y-%m-%dT%H:%i:%s') AS fim,
         c.cli_004_c AS cliente,
+        a.cli_ukey AS cliente_id,
         t.tpr_001_c AS servico
       FROM atd a
       LEFT JOIN cli c ON c.cli_ukey = a.cli_ukey
@@ -67,6 +68,7 @@ Future<Response> onRequest(RequestContext context) async {
             'inicio': linha.typedColByName<String>('inicio'),
             'fim': linha.typedColByName<String>('fim'),
             'cliente': linha.typedColByName<String>('cliente'),
+            'clienteId': linha.typedColByName<String>('cliente_id'),
             'servico': linha.typedColByName<String>('servico'),
           },
         ],

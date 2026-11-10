@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-
+import '../../pacientes/detalhes_paciente.dart';
 import '../../../core/theme/app_colors.dart';
 import '../agenda_service.dart';
 import '../datas.dart';
@@ -77,6 +77,7 @@ class _ItemAtendimento extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final duracao = atendimento.fim?.difference(atendimento.inicio).inMinutes;
+    final clienteId = atendimento.clienteId;
 
     // IntrinsicHeight faz a linha do tempo ter a mesma altura do cartão
     return IntrinsicHeight(
@@ -116,58 +117,75 @@ class _ItemAtendimento extends StatelessWidget {
             ),
           ),
           const SizedBox(width: 8),
-          // Cartão do atendimento
+          // Cartão do atendimento (clicável: abre os dados do paciente)
           Expanded(
-            child: Container(
-              margin: const EdgeInsets.only(bottom: 12),
-              padding: const EdgeInsets.all(12),
-              decoration: BoxDecoration(
+            child: Padding(
+              padding: const EdgeInsets.only(bottom: 12),
+              child: Material(
                 color: AppColors.branco,
-                borderRadius: BorderRadius.circular(12),
-                border: Border.all(color: AppColors.borda),
-              ),
-              child: Row(
-                children: [
-                  CircleAvatar(
-                    radius: 18,
-                    backgroundColor: AppColors.verdeFundo,
-                    child: Text(
-                      _iniciais(atendimento.cliente),
-                      style: const TextStyle(
-                        fontSize: 12,
-                        fontWeight: FontWeight.w600,
-                        color: AppColors.verdeMuitoEscuro,
-                      ),
-                    ),
-                  ),
-                  const SizedBox(width: 12),
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(12),
+                  side: const BorderSide(color: AppColors.borda),
+                ),
+                clipBehavior: Clip.antiAlias,
+                child: InkWell(
+                  onTap: clienteId == null
+                      ? null
+                      : () => mostrarDetalhesPaciente(context, clienteId),
+                  child: Padding(
+                    padding: const EdgeInsets.all(12),
+                    child: Row(
                       children: [
-                        Text(
-                          atendimento.cliente,
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                          style: const TextStyle(fontWeight: FontWeight.w600),
-                        ),
-                        Text(
-                          atendimento.servico,
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                          style: const TextStyle(
-                            fontSize: 13,
-                            color: AppColors.textoSecundario,
+                        CircleAvatar(
+                          radius: 18,
+                          backgroundColor: AppColors.verdeFundo,
+                          child: Text(
+                            _iniciais(atendimento.cliente),
+                            style: const TextStyle(
+                              fontSize: 12,
+                              fontWeight: FontWeight.w600,
+                              color: AppColors.verdeMuitoEscuro,
+                            ),
                           ),
+                        ),
+                        const SizedBox(width: 12),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                atendimento.cliente,
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                                style: const TextStyle(
+                                  fontWeight: FontWeight.w600,
+                                ),
+                              ),
+                              Text(
+                                atendimento.servico,
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                                style: const TextStyle(
+                                  fontSize: 13,
+                                  color: AppColors.textoSecundario,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                        if (duracao != null) ...[
+                          const SizedBox(width: 8),
+                          _Etiqueta('$duracao min'),
+                        ],
+                        const SizedBox(width: 4),
+                        const Icon(
+                          Icons.chevron_right,
+                          color: AppColors.textoSecundario,
                         ),
                       ],
                     ),
                   ),
-                  if (duracao != null) ...[
-                    const SizedBox(width: 8),
-                    _Etiqueta('$duracao min'),
-                  ],
-                ],
+                ),
               ),
             ),
           ),
@@ -186,6 +204,9 @@ class _ItemAtendimento extends StatelessWidget {
     return (primeira + ultima).toUpperCase();
   }
 }
+
+
+  
 
 /// Etiqueta arredondada, como "4 atendimentos" ou "60 min".
 class _Etiqueta extends StatelessWidget {
