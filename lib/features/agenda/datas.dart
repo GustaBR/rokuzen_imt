@@ -1,4 +1,4 @@
-/// Funções de data usadas pela agenda.
+// Funções de data usadas pela agenda.
 
 const diasDaSemanaCurtos = ['SEG', 'TER', 'QUA', 'QUI', 'SEX', 'SÁB', 'DOM'];
 

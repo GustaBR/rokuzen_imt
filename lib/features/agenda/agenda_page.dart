@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-
+import 'widgets/novo_atendimento.dart';
 import '../../core/theme/app_colors.dart';
 import 'agenda_service.dart';
 import 'datas.dart';
@@ -75,6 +75,61 @@ class _AgendaPageState extends State<AgendaPage> {
     });
   }
 
+    /// Abre o formulário; se marcar, vai para o dia e recarrega a agenda.
+  Future<void> _novoAtendimento() async {
+    final marcado = await mostrarNovoAtendimento(
+      context,
+      _diaSelecionado,
+      _service,
+    );
+    if (marcado == null) return;
+
+    _mostrarMensagem('Atendimento marcado');
+    setState(() => _diaSelecionado = soData(marcado));
+    _carregar();
+  }
+
+  /// Confirma e remove um atendimento particular.
+  Future<void> _removerParticular(Atendimento particular) async {
+    final confirmou = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Remover atendimento particular?'),
+        content: Text(
+          '${particular.cliente}\n'
+          '${diaPorExtenso(particular.inicio)}, ${hora(particular.inicio)}',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: const Text('Cancelar'),
+          ),
+          TextButton(
+            onPressed: () => Navigator.pop(context, true),
+            child: const Text('Remover'),
+          ),
+        ],
+      ),
+    );
+    if (confirmou != true) return;
+
+    try {
+      await _service.removerParticular(particular.particularId!);
+      _mostrarMensagem('Atendimento removido');
+      _carregar();
+    } on AgendaException catch (e) {
+      _mostrarMensagem(e.mensagem);
+    }
+  }
+
+  void _mostrarMensagem(String mensagem) {
+    if (!mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: Text(mensagem)),
+    );
+  }
+
+
   @override
   Widget build(BuildContext context) {
     return Container(
@@ -133,6 +188,13 @@ class _AgendaPageState extends State<AgendaPage> {
                 'Agenda completa',
                 style: Theme.of(context).textTheme.headlineSmall,
               ),
+                      const SizedBox(width: 12),
+        FilledButton.icon(
+          onPressed: _novoAtendimento,
+          icon: const Icon(Icons.add),
+          label: const Text('Novo atendimento'),
+        ),
+
               const Text(
                 'Visualize seus atendimentos da semana',
                 style: TextStyle(color: AppColors.textoSecundario),
@@ -210,7 +272,11 @@ class _AgendaPageState extends State<AgendaPage> {
             else if (_verSemana)
               ..._listaDaSemana(dados)
             else
-              ListaDoDia(dia: _diaSelecionado, dados: dados),
+              ListaDoDia(
+                dia: _diaSelecionado,
+                dados: dados,
+                aoTocarParticular: _removerParticular,
+              ),
 
 
           ],
@@ -242,7 +308,11 @@ class _AgendaPageState extends State<AgendaPage> {
     return [
       for (var i = 0; i < diasComAtendimento.length; i++) ...[
         if (i > 0) const Divider(height: 32),
-        ListaDoDia(dia: diasComAtendimento[i], dados: dados),
+        ListaDoDia(
+          dia: diasComAtendimento[i],
+          dados: dados,
+          aoTocarParticular: _removerParticular,
+        ),
       ],
     ];
   }

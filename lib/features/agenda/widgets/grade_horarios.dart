@@ -206,13 +206,19 @@ class _BlocoAtendimento extends StatelessWidget {
     return ClipRRect(
       borderRadius: BorderRadius.circular(8),
       child: ColoredBox(
-        color: AppColors.cardSessao,
+        color: atendimento.ehParticular
+              ? AppColors.verdeFundo
+              : AppColors.cardSessao,
         child: Row(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            const SizedBox(
+            SizedBox(
               width: 4,
-              child: ColoredBox(color: AppColors.verde),
+              child: ColoredBox(
+                color: atendimento.ehParticular
+                    ? AppColors.roxo
+                    : AppColors.verde,
+              ),
             ),
             Expanded(
               // Em sessões curtas o texto é cortado, em vez de

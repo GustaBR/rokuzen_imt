@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
-import '../../pacientes/detalhes_paciente.dart';
+
 import '../../../core/theme/app_colors.dart';
+import '../../pacientes/detalhes_paciente.dart';
 import '../agenda_service.dart';
 import '../datas.dart';
 
@@ -8,8 +9,14 @@ import '../datas.dart';
 class ListaDoDia extends StatelessWidget {
   final DateTime dia;
   final AgendaDados dados;
+  final void Function(Atendimento) aoTocarParticular;
 
-  const ListaDoDia({super.key, required this.dia, required this.dados});
+  const ListaDoDia({
+    super.key,
+    required this.dia,
+    required this.dados,
+    required this.aoTocarParticular,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -57,6 +64,7 @@ class ListaDoDia extends StatelessWidget {
             _ItemAtendimento(
               atendimento: atendimentos[i],
               ultimo: i == atendimentos.length - 1,
+              aoTocarParticular: aoTocarParticular,
             ),
       ],
     );
@@ -71,13 +79,19 @@ class ListaDoDia extends StatelessWidget {
 class _ItemAtendimento extends StatelessWidget {
   final Atendimento atendimento;
   final bool ultimo;
+  final void Function(Atendimento) aoTocarParticular;
 
-  const _ItemAtendimento({required this.atendimento, required this.ultimo});
+  const _ItemAtendimento({
+    required this.atendimento,
+    required this.ultimo,
+    required this.aoTocarParticular,
+  });
 
   @override
   Widget build(BuildContext context) {
     final duracao = atendimento.fim?.difference(atendimento.inicio).inMinutes;
     final clienteId = atendimento.clienteId;
+    final particular = atendimento.ehParticular;
 
     // IntrinsicHeight faz a linha do tempo ter a mesma altura do cartão
     return IntrinsicHeight(
@@ -117,7 +131,8 @@ class _ItemAtendimento extends StatelessWidget {
             ),
           ),
           const SizedBox(width: 8),
-          // Cartão do atendimento (clicável: abre os dados do paciente)
+          // Cartão do atendimento: Rokuzen abre a ficha do paciente,
+          // particular oferece remover
           Expanded(
             child: Padding(
               padding: const EdgeInsets.only(bottom: 12),
@@ -129,22 +144,27 @@ class _ItemAtendimento extends StatelessWidget {
                 ),
                 clipBehavior: Clip.antiAlias,
                 child: InkWell(
-                  onTap: clienteId == null
-                      ? null
-                      : () => mostrarDetalhesPaciente(context, clienteId),
+                  onTap: particular
+                      ? () => aoTocarParticular(atendimento)
+                      : clienteId == null
+                          ? null
+                          : () => mostrarDetalhesPaciente(context, clienteId),
                   child: Padding(
                     padding: const EdgeInsets.all(12),
                     child: Row(
                       children: [
                         CircleAvatar(
                           radius: 18,
-                          backgroundColor: AppColors.verdeFundo,
+                          backgroundColor:
+                              particular ? AppColors.roxo : AppColors.verdeFundo,
                           child: Text(
                             _iniciais(atendimento.cliente),
-                            style: const TextStyle(
+                            style: TextStyle(
                               fontSize: 12,
                               fontWeight: FontWeight.w600,
-                              color: AppColors.verdeMuitoEscuro,
+                              color: particular
+                                  ? AppColors.branco
+                                  : AppColors.verdeMuitoEscuro,
                             ),
                           ),
                         ),
@@ -173,6 +193,10 @@ class _ItemAtendimento extends StatelessWidget {
                             ],
                           ),
                         ),
+                        if (particular) ...[
+                          const SizedBox(width: 8),
+                          const _Etiqueta('Particular'),
+                        ],
                         if (duracao != null) ...[
                           const SizedBox(width: 8),
                           _Etiqueta('$duracao min'),
@@ -204,9 +228,6 @@ class _ItemAtendimento extends StatelessWidget {
     return (primeira + ultima).toUpperCase();
   }
 }
-
-
-  
 
 /// Etiqueta arredondada, como "4 atendimentos" ou "60 min".
 class _Etiqueta extends StatelessWidget {
