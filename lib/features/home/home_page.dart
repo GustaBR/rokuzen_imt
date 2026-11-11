@@ -88,8 +88,7 @@ void _selecionarAba(int index) {
             child: Builder(
               builder: (context) => IconButton(
                 tooltip: 'Abrir menu',
-                onPressed: () =>
-                    Scaffold.of(context).openDrawer(),
+                onPressed: () => Scaffold.of(context).openDrawer(),
                 icon: const Icon(
                   Icons.menu,
                   color: AppColors.marrom,
@@ -108,15 +107,7 @@ void _selecionarAba(int index) {
           ),
           Align(
             alignment: Alignment.centerRight,
-            child: IconButton(
-              tooltip: 'Perfil',
-              onPressed: () {},
-              icon: const Icon(
-                Icons.person_outline,
-                color: AppColors.cinza,
-                size: 28,
-              ),
-            ),
+            child: _botaoPerfil(),
           ),
         ],
       )
@@ -130,15 +121,7 @@ void _selecionarAba(int index) {
             alignment: Alignment.centerLeft,
           ),
           const Spacer(),
-          IconButton(
-            tooltip: 'Perfil',
-            onPressed: () {},
-            icon: const Icon(
-              Icons.person_outline,
-              color: AppColors.cinza,
-              size: 28,
-            ),
-          ),
+          _botaoPerfil(),
         ],
       ),
     );
@@ -257,4 +240,64 @@ void _selecionarAba(int index) {
   Widget _conteudo() {
     return widget.child;
   }
+
+
+  Widget _botaoPerfil() {
+    return PopupMenuButton<String>(
+      tooltip: 'Perfil',
+      icon: const Icon(
+        Icons.person_outline,
+        color: AppColors.cinza,
+        size: 28,
+      ),
+      color: AppColors.branco,
+      elevation: 4,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(12),
+      ),
+      offset: const Offset(0, 45),
+      onSelected: (opcao) {
+        if (opcao == 'meus_dados') {
+          context.go('/meus-dados');
+        }
+      },
+      itemBuilder: (context) => [
+        const PopupMenuItem<String>(
+          value: 'meus_dados',
+          child: Row(
+            children: [
+              Icon(
+                Icons.person_outline,
+                color: AppColors.marrom,
+                size: 20,
+              ),
+              SizedBox(width: 12),
+              Text(
+                'Meus Dados',
+                style: TextStyle(color: AppColors.marrom),
+              ),
+            ],
+          ),
+        ),
+        const PopupMenuItem<String>(
+          value: 'sair',
+          child: Row(
+            children: [
+              Icon(
+                Icons.logout,
+                color: AppColors.erro,
+                size: 20,
+              ),
+              SizedBox(width: 12),
+              Text(
+                'Sair',
+                style: TextStyle(color: AppColors.erro),
+              ),
+            ],
+          ),
+        ),
+      ],
+    );
+  }
+
 }
