@@ -48,6 +48,85 @@ void _selecionarAba(int index) {
   bool get _mobile =>
       MediaQuery.of(context).size.width < 600;
 
+    void _confirmarSaida() {
+    showDialog<void>(
+      context: context,
+      builder: (dialogContext) {
+        return AlertDialog(
+          backgroundColor: AppColors.branco,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(18),
+          ),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Container(
+                width: 64,
+                height: 64,
+                decoration: const BoxDecoration(
+                  color: AppColors.verdeFundo,
+                  shape: BoxShape.circle,
+                ),
+                child: const Icon(
+                  Icons.logout,
+                  color: AppColors.marrom,
+                  size: 34,
+                ),
+              ),
+              const SizedBox(height: 18),
+              const Text(
+                'Deseja realmente sair?',
+                textAlign: TextAlign.center,
+                style: TextStyle(
+                  color: AppColors.marrom,
+                  fontSize: 19,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+              const SizedBox(height: 10),
+              const Text(
+                'Você será redirecionado para a tela de login.',
+                textAlign: TextAlign.center,
+                style: TextStyle(
+                  color: AppColors.cinza,
+                  fontSize: 14,
+                ),
+              ),
+            ],
+          ),
+          actionsAlignment: MainAxisAlignment.center,
+          actions: [
+            OutlinedButton(
+              onPressed: () => Navigator.pop(dialogContext),
+              style: OutlinedButton.styleFrom(
+                foregroundColor: AppColors.marrom,
+                side: const BorderSide(color: AppColors.borda),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(10),
+                ),
+              ),
+              child: const Text('Não'),
+            ),
+            ElevatedButton(
+              onPressed: () {
+                Navigator.pop(dialogContext);
+                context.go('/login');
+              },
+              style: ElevatedButton.styleFrom(
+                backgroundColor: AppColors.verde,
+                foregroundColor: AppColors.branco,
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(10),
+                ),
+              ),
+              child: const Text('Sim'),
+            ),
+          ],
+        );
+      },
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -259,6 +338,8 @@ void _selecionarAba(int index) {
       onSelected: (opcao) {
         if (opcao == 'meus_dados') {
           context.go('/meus-dados');
+        } else if (opcao == 'sair') {
+          _confirmarSaida();
         }
       },
       itemBuilder: (context) => [
