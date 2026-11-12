@@ -53,13 +53,9 @@ class _NovoAtendimentoDialogState extends State<_NovoAtendimentoDialog> {
   final _observacaoController = TextEditingController();
   TimeOfDay _fim = const TimeOfDay(hour: 11, minute: 0);
 
-  
-    /// Horas (06 a 23) e minutos (de 15 em 15) dos campos de horário.
+  /// Horas (06 a 23) e minutos (de 15 em 15) dos campos de horário.
   static final _horas = [for (var hora = 6; hora <= 23; hora++) hora];
   static const _minutos = [0, 15, 30, 45];
-
-  
-
 
   @override
   void initState() {
@@ -112,8 +108,6 @@ class _NovoAtendimentoDialogState extends State<_NovoAtendimentoDialog> {
     );
     if (dia != null) setState(() => _dia = dia);
   }
-
-  
 
   DateTime _comHora(TimeOfDay hora) =>
       DateTime(_dia.year, _dia.month, _dia.day, hora.hour, hora.minute);
@@ -196,20 +190,13 @@ class _NovoAtendimentoDialogState extends State<_NovoAtendimentoDialog> {
                   label: Text(diaPorExtenso(_dia)),
                 ),
                 const SizedBox(height: 8),
-                                Row(
-                  children: [
-                    Expanded(
-                      child: _campoHora('Início', _inicio, (h) => _inicio = h),
-                    ),
-                    // No Rokuzen o fim é calculado pela duração
-                    if (!rokuzen) ...[
-                      const SizedBox(width: 8),
-                      Expanded(
-                        child: _campoHora('Fim', _fim, (h) => _fim = h),
-                      ),
-                    ],
-                  ],
-                ),
+
+                _campoHora('Início', _inicio, (h) => _inicio = h),
+                // No Rokuzen o fim é calculado pela duração
+                if (!rokuzen) ...[
+                  const SizedBox(height: 8),
+                  _campoHora('Fim', _fim, (h) => _fim = h),
+                ],
 
                 if (!rokuzen) ...[
                   const SizedBox(height: 12),
@@ -291,8 +278,10 @@ class _NovoAtendimentoDialogState extends State<_NovoAtendimentoDialog> {
               elevation: 4,
               borderRadius: BorderRadius.circular(8),
               child: ConstrainedBox(
-                constraints:
-                    const BoxConstraints(maxHeight: 260, maxWidth: 440),
+                constraints: const BoxConstraints(
+                  maxHeight: 260,
+                  maxWidth: 440,
+                ),
                 child: ListView(
                   padding: EdgeInsets.zero,
                   shrinkWrap: true,
@@ -301,11 +290,13 @@ class _NovoAtendimentoDialogState extends State<_NovoAtendimentoDialog> {
                       ListTile(
                         title: Text(paciente.nome),
                         // Nascimento e celular para diferenciar homônimos
-                        subtitle: Text([
-                          if (paciente.nascimento != null)
-                            'Nasc. ${paciente.nascimento}',
-                          if (paciente.celular != null) paciente.celular!,
-                        ].join(' · ')),
+                        subtitle: Text(
+                          [
+                            if (paciente.nascimento != null)
+                              'Nasc. ${paciente.nascimento}',
+                            if (paciente.celular != null) paciente.celular!,
+                          ].join(' · '),
+                        ),
                         onTap: () => aoEscolher(paciente),
                       ),
                   ],
@@ -364,8 +355,7 @@ class _NovoAtendimentoDialogState extends State<_NovoAtendimentoDialog> {
     ];
   }
 
-
-    /// Horário em dois campos curtos: hora e minuto.
+  /// Horário em dois campos curtos: hora e minuto.
   Widget _campoHora(
     String rotulo,
     TimeOfDay valor,
@@ -373,10 +363,18 @@ class _NovoAtendimentoDialogState extends State<_NovoAtendimentoDialog> {
   ) {
     return Row(
       children: [
+        SizedBox(
+          width: 64,
+          child: Text(
+            rotulo,
+            style: const TextStyle(fontWeight: FontWeight.w600),
+          ),
+        ),
+
         Expanded(
           child: DropdownButtonFormField<int>(
             initialValue: valor.hour,
-            decoration: _decoracao(rotulo),
+            decoration: _decoracao('hora'),
             menuMaxHeight: 300,
             items: [
               for (final hora in _horas)
@@ -387,7 +385,9 @@ class _NovoAtendimentoDialogState extends State<_NovoAtendimentoDialog> {
             ],
             onChanged: (hora) {
               if (hora == null) return;
-              setState(() => aoMudar(TimeOfDay(hour: hora, minute: valor.minute)));
+              setState(
+                () => aoMudar(TimeOfDay(hour: hora, minute: valor.minute)),
+              );
             },
           ),
         ),
@@ -408,15 +408,15 @@ class _NovoAtendimentoDialogState extends State<_NovoAtendimentoDialog> {
             ],
             onChanged: (minuto) {
               if (minuto == null) return;
-              setState(() => aoMudar(TimeOfDay(hour: valor.hour, minute: minuto)));
+              setState(
+                () => aoMudar(TimeOfDay(hour: valor.hour, minute: minuto)),
+              );
             },
           ),
         ),
       ],
     );
   }
-
-  
 
   /// O tema deixa os campos brancos e sem borda; dentro da janela
   /// (que também é branca) eles precisam de borda para aparecer.
