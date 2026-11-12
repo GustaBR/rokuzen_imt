@@ -20,7 +20,15 @@ Future<Response> onRequest(RequestContext context) async {
       '''
       SELECT tpr_ukey, tpr_001_c
       FROM tpr
-      WHERE und_ukey = :unidade AND tpr_005_c = 'S'
+      WHERE und_ukey = :unidade
+        AND tpr_005_c = 'S'
+        AND tpr_001_c REGEXP '^[0-9]+[.]'
+        AND EXISTS (
+          SELECT 1 FROM tvr
+          WHERE tvr.tpr_ukey = tpr.tpr_ukey AND tvr.tvr_001_c + 0 > 0
+        )
+        AND (tpr_006_c IS NULL OR tpr_006_c <> 13)
+
       ORDER BY tpr_001_c
       ''',
       {'unidade': unidade},

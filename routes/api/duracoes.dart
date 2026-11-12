@@ -19,7 +19,9 @@ Future<Response> onRequest(RequestContext context) async {
 
   try {
     final resultado = await pool.execute(
-      'SELECT tvr_001_c FROM tvr WHERE tpr_ukey = :servico ORDER BY tvr_001_c',
+      'SELECT tvr_001_c FROM tvr WHERE tpr_ukey = :servico '
+      'ORDER BY tvr_001_c + 0',
+
       {'servico': servico},
     );
 

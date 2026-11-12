@@ -53,6 +53,14 @@ class _NovoAtendimentoDialogState extends State<_NovoAtendimentoDialog> {
   final _observacaoController = TextEditingController();
   TimeOfDay _fim = const TimeOfDay(hour: 11, minute: 0);
 
+  
+    /// Horas (06 a 23) e minutos (de 15 em 15) dos campos de horário.
+  static final _horas = [for (var hora = 6; hora <= 23; hora++) hora];
+  static const _minutos = [0, 15, 30, 45];
+
+  
+
+
   @override
   void initState() {
     super.initState();
@@ -105,20 +113,7 @@ class _NovoAtendimentoDialogState extends State<_NovoAtendimentoDialog> {
     if (dia != null) setState(() => _dia = dia);
   }
 
-  Future<void> _escolherHora({required bool inicio}) async {
-    final hora = await showTimePicker(
-      context: context,
-      initialTime: inicio ? _inicio : _fim,
-    );
-    if (hora == null) return;
-    setState(() {
-      if (inicio) {
-        _inicio = hora;
-      } else {
-        _fim = hora;
-      }
-    });
-  }
+  
 
   DateTime _comHora(TimeOfDay hora) =>
       DateTime(_dia.year, _dia.month, _dia.day, hora.hour, hora.minute);
@@ -201,26 +196,21 @@ class _NovoAtendimentoDialogState extends State<_NovoAtendimentoDialog> {
                   label: Text(diaPorExtenso(_dia)),
                 ),
                 const SizedBox(height: 8),
-                Row(
+                                Row(
                   children: [
                     Expanded(
-                      child: OutlinedButton(
-                        onPressed: () => _escolherHora(inicio: true),
-                        child: Text('Início: ${_inicio.format(context)}'),
-                      ),
+                      child: _campoHora('Início', _inicio, (h) => _inicio = h),
                     ),
                     // No Rokuzen o fim é calculado pela duração
                     if (!rokuzen) ...[
                       const SizedBox(width: 8),
                       Expanded(
-                        child: OutlinedButton(
-                          onPressed: () => _escolherHora(inicio: false),
-                          child: Text('Fim: ${_fim.format(context)}'),
-                        ),
+                        child: _campoHora('Fim', _fim, (h) => _fim = h),
                       ),
                     ],
                   ],
                 ),
+
                 if (!rokuzen) ...[
                   const SizedBox(height: 12),
                   TextFormField(
@@ -373,6 +363,60 @@ class _NovoAtendimentoDialogState extends State<_NovoAtendimentoDialog> {
       ),
     ];
   }
+
+
+    /// Horário em dois campos curtos: hora e minuto.
+  Widget _campoHora(
+    String rotulo,
+    TimeOfDay valor,
+    void Function(TimeOfDay) aoMudar,
+  ) {
+    return Row(
+      children: [
+        Expanded(
+          child: DropdownButtonFormField<int>(
+            initialValue: valor.hour,
+            decoration: _decoracao(rotulo),
+            menuMaxHeight: 300,
+            items: [
+              for (final hora in _horas)
+                DropdownMenuItem(
+                  value: hora,
+                  child: Text(hora.toString().padLeft(2, '0')),
+                ),
+            ],
+            onChanged: (hora) {
+              if (hora == null) return;
+              setState(() => aoMudar(TimeOfDay(hour: hora, minute: valor.minute)));
+            },
+          ),
+        ),
+        const Padding(
+          padding: EdgeInsets.symmetric(horizontal: 4),
+          child: Text(':', style: TextStyle(fontSize: 20)),
+        ),
+        Expanded(
+          child: DropdownButtonFormField<int>(
+            initialValue: valor.minute,
+            decoration: _decoracao('min'),
+            items: [
+              for (final minuto in _minutos)
+                DropdownMenuItem(
+                  value: minuto,
+                  child: Text(minuto.toString().padLeft(2, '0')),
+                ),
+            ],
+            onChanged: (minuto) {
+              if (minuto == null) return;
+              setState(() => aoMudar(TimeOfDay(hour: valor.hour, minute: minuto)));
+            },
+          ),
+        ),
+      ],
+    );
+  }
+
+  
 
   /// O tema deixa os campos brancos e sem borda; dentro da janela
   /// (que também é branca) eles precisam de borda para aparecer.
