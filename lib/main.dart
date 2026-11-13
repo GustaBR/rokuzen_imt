@@ -7,6 +7,7 @@ import 'features/home/inicio_page.dart';
 import 'features/agenda/agenda_page.dart';
 import 'features/historico/historico_page.dart';
 import 'features/pacientes/cadastrar_paciente_page.dart';
+import 'package:flutter_localizations/flutter_localizations.dart';
 import 'features/perfil/meus_dados_page.dart';
 
 
@@ -135,6 +136,13 @@ class RokuzenApp extends StatelessWidget {
       debugShowCheckedModeBanner: false,
       theme: AppTheme.tema,
       routerConfig: _router,
+      locale: const Locale('pt', 'BR'),
+      supportedLocales: const [Locale('pt', 'BR')],
+      localizationsDelegates: const [
+        GlobalMaterialLocalizations.delegate,
+        GlobalWidgetsLocalizations.delegate,
+        GlobalCupertinoLocalizations.delegate,
+      ],
     );
   }
 }
