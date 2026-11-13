@@ -48,6 +48,85 @@ void _selecionarAba(int index) {
   bool get _mobile =>
       MediaQuery.of(context).size.width < 600;
 
+    void _confirmarSaida() {
+    showDialog<void>(
+      context: context,
+      builder: (dialogContext) {
+        return AlertDialog(
+          backgroundColor: AppColors.branco,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(18),
+          ),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Container(
+                width: 64,
+                height: 64,
+                decoration: const BoxDecoration(
+                  color: AppColors.verdeFundo,
+                  shape: BoxShape.circle,
+                ),
+                child: const Icon(
+                  Icons.logout,
+                  color: AppColors.marrom,
+                  size: 34,
+                ),
+              ),
+              const SizedBox(height: 18),
+              const Text(
+                'Deseja realmente sair?',
+                textAlign: TextAlign.center,
+                style: TextStyle(
+                  color: AppColors.marrom,
+                  fontSize: 19,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+              const SizedBox(height: 10),
+              const Text(
+                'Você será redirecionado para a tela de login.',
+                textAlign: TextAlign.center,
+                style: TextStyle(
+                  color: AppColors.cinza,
+                  fontSize: 14,
+                ),
+              ),
+            ],
+          ),
+          actionsAlignment: MainAxisAlignment.center,
+          actions: [
+            OutlinedButton(
+              onPressed: () => Navigator.pop(dialogContext),
+              style: OutlinedButton.styleFrom(
+                foregroundColor: AppColors.marrom,
+                side: const BorderSide(color: AppColors.borda),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(10),
+                ),
+              ),
+              child: const Text('Não'),
+            ),
+            ElevatedButton(
+              onPressed: () {
+                Navigator.pop(dialogContext);
+                context.go('/login');
+              },
+              style: ElevatedButton.styleFrom(
+                backgroundColor: AppColors.verde,
+                foregroundColor: AppColors.branco,
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(10),
+                ),
+              ),
+              child: const Text('Sim'),
+            ),
+          ],
+        );
+      },
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -88,8 +167,7 @@ void _selecionarAba(int index) {
             child: Builder(
               builder: (context) => IconButton(
                 tooltip: 'Abrir menu',
-                onPressed: () =>
-                    Scaffold.of(context).openDrawer(),
+                onPressed: () => Scaffold.of(context).openDrawer(),
                 icon: const Icon(
                   Icons.menu,
                   color: AppColors.marrom,
@@ -108,15 +186,7 @@ void _selecionarAba(int index) {
           ),
           Align(
             alignment: Alignment.centerRight,
-            child: IconButton(
-              tooltip: 'Perfil',
-              onPressed: () {},
-              icon: const Icon(
-                Icons.person_outline,
-                color: AppColors.cinza,
-                size: 28,
-              ),
-            ),
+            child: _botaoPerfil(),
           ),
         ],
       )
@@ -130,15 +200,7 @@ void _selecionarAba(int index) {
             alignment: Alignment.centerLeft,
           ),
           const Spacer(),
-          IconButton(
-            tooltip: 'Perfil',
-            onPressed: () {},
-            icon: const Icon(
-              Icons.person_outline,
-              color: AppColors.cinza,
-              size: 28,
-            ),
-          ),
+          _botaoPerfil(),
         ],
       ),
     );
@@ -257,4 +319,66 @@ void _selecionarAba(int index) {
   Widget _conteudo() {
     return widget.child;
   }
+
+
+  Widget _botaoPerfil() {
+    return PopupMenuButton<String>(
+      tooltip: 'Perfil',
+      icon: const Icon(
+        Icons.person_outline,
+        color: AppColors.cinza,
+        size: 28,
+      ),
+      color: AppColors.branco,
+      elevation: 4,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(12),
+      ),
+      offset: const Offset(0, 45),
+      onSelected: (opcao) {
+        if (opcao == 'meus_dados') {
+          context.go('/meus-dados');
+        } else if (opcao == 'sair') {
+          _confirmarSaida();
+        }
+      },
+      itemBuilder: (context) => [
+        const PopupMenuItem<String>(
+          value: 'meus_dados',
+          child: Row(
+            children: [
+              Icon(
+                Icons.person_outline,
+                color: AppColors.marrom,
+                size: 20,
+              ),
+              SizedBox(width: 12),
+              Text(
+                'Meus Dados',
+                style: TextStyle(color: AppColors.marrom),
+              ),
+            ],
+          ),
+        ),
+        const PopupMenuItem<String>(
+          value: 'sair',
+          child: Row(
+            children: [
+              Icon(
+                Icons.logout,
+                color: AppColors.erro,
+                size: 20,
+              ),
+              SizedBox(width: 12),
+              Text(
+                'Sair',
+                style: TextStyle(color: AppColors.erro),
+              ),
+            ],
+          ),
+        ),
+      ],
+    );
+  }
+
 }
