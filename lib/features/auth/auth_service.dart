@@ -45,4 +45,46 @@ class AuthService {
 
     return Usuario.fromJson(dados);
   }
+
+  Future<void> cadastrar({
+    required String nome,
+    required String email,
+    required String celular,
+    required String cpf,
+    required DateTime nascimento,
+    required String senha,
+  }) async {
+    final http.Response resposta;
+    try {
+      resposta = await http
+          .post(
+            Uri.parse('${ApiConfig.baseUrl}/api/cadastro_cliente'),
+            headers: {'Content-Type': 'application/json'},
+            body: jsonEncode({
+              'nome': nome,
+              'email': email,
+              'celular': celular,
+              'cpf': cpf,
+              'nascimento': nascimento.toIso8601String().substring(0, 10),
+              'senha': senha,
+            }),
+          )
+          .timeout(const Duration(seconds: 10));
+    } catch (_) {
+      throw const AuthException(
+        'Não foi possível conectar ao servidor. Tente novamente.',
+      );
+    }
+
+    if (resposta.statusCode == 201) return;
+
+    var mensagem = 'Não foi possível criar a conta.';
+    try {
+      final dados =
+          jsonDecode(utf8.decode(resposta.bodyBytes)) as Map<String, dynamic>;
+      mensagem = dados['erro'] as String? ?? mensagem;
+    } catch (_) {}
+    throw AuthException(mensagem);
+  }
+
 }

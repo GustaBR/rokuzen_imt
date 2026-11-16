@@ -1,4 +1,5 @@
 import 'dart:io';
+import 'package:bcrypt/bcrypt.dart';
 
 import 'package:dart_frog/dart_frog.dart';
 import 'package:mysql_dart/mysql_dart.dart';
@@ -33,7 +34,7 @@ try {
   );
 
   if (resultado.rows.isEmpty) {
-    return _credenciaisInvalidas();
+    return await _loginCliente(pool, login, senha);
   }
 
   final usuario = resultado.rows.first;
@@ -59,6 +60,7 @@ try {
     body: {
       'id': id,
       'nome': usuario.typedColByName<String>('usr_002_c'),
+      'perfil': 'terapeuta',
       'tipo': usuario.typedColByName<String>('usr_010_c'),
       'unidadePrincipal': unidadePrincipal,
       'unidades': [
@@ -83,3 +85,43 @@ Response _credenciaisInvalidas() =>
 
 Response _erro(int status, String mensagem) =>
     Response.json(statusCode: status, body: {'erro': mensagem});
+
+
+Future<Response> _loginCliente(
+  MySQLConnectionPool pool,
+  String email,
+  String senha,
+) async {
+  final resultado = await pool.execute(
+    '''
+    SELECT a.cli_ukey, a.senha_hash, c.cli_004_c AS nome
+    FROM maua_cli_acesso a
+    JOIN cli c ON c.cli_ukey = a.cli_ukey
+    WHERE a.email = :email
+    LIMIT 1
+    ''',
+    {'email': email.toLowerCase()},
+  );
+
+  if (resultado.rows.isEmpty) {
+    return _credenciaisInvalidas();
+  }
+
+  final cliente = resultado.rows.first;
+  final hash = cliente.typedColByName<String>('senha_hash')!;
+
+  if (!BCrypt.checkpw(senha, hash)) {
+    return _credenciaisInvalidas();
+  }
+
+  return Response.json(
+    body: {
+      'id': cliente.typedColByName<String>('cli_ukey'),
+      'nome': cliente.typedColByName<String>('nome'),
+      'tipo': null,
+      'perfil': 'cliente',
+      'unidadePrincipal': null,
+      'unidades': <Object>[],
+    },
+  );
+}
