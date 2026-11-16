@@ -1,6 +1,7 @@
 import 'dart:convert';
 
 import 'package:http/http.dart' as http;
+import '../../core/texto.dart';
 
 import '../../core/api/api_config.dart';
 import '../../core/sessao.dart';
@@ -33,7 +34,7 @@ class Atendimento {
       inicio: DateTime.parse(json['inicio'] as String),
       fim: json['fim'] == null ? null : DateTime.parse(json['fim'] as String),
       cliente: json['cliente'] as String? ?? 'Cliente não informado',
-      servico: _limparNomeServico(json['servico'] as String? ?? ''),
+      servico: limparNomeServico(json['servico'] as String? ?? ''),
       clienteId: json['clienteId'] as String?,
     );
   }
@@ -99,7 +100,7 @@ class Servico {
   factory Servico.fromJson(Map<String, dynamic> json) {
     return Servico(
       id: json['id'] as String,
-      nome: _limparNomeServico(json['nome'] as String? ?? ''),
+      nome: limparNomeServico(json['nome'] as String? ?? ''),
     );
   }
 }
@@ -297,20 +298,5 @@ class AgendaService {
       '${data.day.toString().padLeft(2, '0')}';
 }
 
-/// Os nomes dos serviços no banco têm um prefixo usado para ordenar as listas
-/// (ex.: "1.Quick Massage", "D.GIFT CARD", "(2020)3.MACA"). Aqui ele é removido
-/// e os acentos são corrigidos.
-String _limparNomeServico(String nome) => _corrigirAcentos(nome)
-    .replaceFirst(RegExp(r'^(\(\d+\))?\s*\w{1,2}\.\s*'), '');
 
-/// Alguns textos do banco foram gravados em UTF-8 mas são lidos como latin1,
-/// e "Sessão" vira "SessÃ£o". Aqui o texto é convertido de volta.
-/// Se não for esse o caso, devolve o texto como está.
-String _corrigirAcentos(String texto) {
-  try {
-    return utf8.decode(latin1.encode(texto));
-  } catch (_) {
-    return texto;
-  }
-}
 
