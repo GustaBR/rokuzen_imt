@@ -57,12 +57,18 @@ class _HistoricoPageState extends State<HistoricoPage> {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      const Text(
-                        'Atendimento',
-                        style: TextStyle(
-                          fontSize: 18,
-                          fontWeight: FontWeight.bold,
-                        ),
+                      Row(
+                        children: [
+                          Icon(Icons.person, size: 22),
+                          const SizedBox(width: 6),
+                          Text(
+                            atendimento.cliente,
+                            style: TextStyle(
+                              fontSize: 18,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                        ],
                       ),
                       const SizedBox(height: 12),
                       Row(
@@ -78,6 +84,14 @@ class _HistoricoPageState extends State<HistoricoPage> {
                           const Icon(Icons.access_time_filled, size: 20),
                           const SizedBox(width: 8),
                           Text('Fim: ${_formatarHorario(atendimento.fim)}'),
+                        ],
+                      ),
+                      const SizedBox(height: 8),
+                      Row(
+                        children: [
+                          const Icon(Icons.money, size: 20),
+                          const SizedBox(width: 8),
+                          Text('Valor: R\$${(atendimento.valor.toStringAsFixed(2))}'),
                         ],
                       ),
                     ],

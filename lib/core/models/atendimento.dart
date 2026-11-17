@@ -1,16 +1,19 @@
 class Atendimento {
-  final String id;
+  final String cliente;
   final DateTime inicio;
   final DateTime fim;
-  
+  final double valor;
+
   Atendimento({
-    required this.id,
+    required this.cliente,
     required this.inicio,
-    required this.fim
+    required this.fim,
+    required this.valor,
   });
 
-  Atendimento.fromJson(Map<String, dynamic> json) :
-    id = json['id'] as String,
-    inicio = DateTime.parse(json['inicio'] as String),
-    fim = DateTime.parse(json['fim'] as String);
+  Atendimento.fromJson(Map<String, dynamic> json)
+    : cliente = json['cliente'] as String,
+      inicio = DateTime.parse(json['inicio'] as String),
+      fim = DateTime.parse(json['fim'] as String),
+      valor = double.parse(json['valor'] as String);
 }

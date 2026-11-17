@@ -15,7 +15,18 @@ Future<Response> onRequest(RequestContext context, String id) async {
   final pool = context.read<MySQLConnectionPool>();
 
   final resultado = await pool.execute(
-    'SELECT * FROM atd WHERE usr_ukey = :id',
+    '''
+      SELECT
+        atd.usr_ukey,
+        atd.cli_ukey,
+        atd.atd_002_c,
+        atd.atd_003_c,
+        atd.atd_004_c,
+        cli.cli_004_c 
+      FROM atd
+      LEFT JOIN cli ON atd.cli_ukey = cli.cli_ukey
+      WHERE atd.usr_ukey = :id;
+    ''',
     {'id': id}    
   );
 
@@ -24,9 +35,10 @@ Future<Response> onRequest(RequestContext context, String id) async {
     body: {
       'mensagem': "Os atendimentos foram carregados com sucesso.",
       'atendimentos': List.from(resultado.rows.map((atendimento) => {
-        'id': atendimento.typedColByName<String>('atd_ukey'),
         'inicio': atendimento.typedColByName<String>('atd_002_c'),
         'fim': atendimento.typedColByName<String>('atd_003_c'),
+        'valor': atendimento.typedColByName<String>('atd_004_c'),
+        'cliente': atendimento.typedColByName<String>('cli_004_c'),
       })),
     }
   );
