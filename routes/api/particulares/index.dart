@@ -52,6 +52,26 @@ Future<Response> onRequest(RequestContext context) async {
   };
 
   try {
+        
+    final dentroDeLivre = await pool.execute(
+      '''
+      SELECT 1 FROM maua_horario_livre
+      WHERE usr_ukey = :terapeuta
+        AND inicio <= :inicio
+        AND fim >= :fim
+      LIMIT 1
+      ''',
+      valores,
+    );
+
+    if (dentroDeLivre.rows.isEmpty) {
+      return _erro(
+        HttpStatus.conflict,
+        'O atendimento particular precisa estar dentro de um horário livre',
+      );
+    }
+
+
     final conflitos = await pool.execute(
       '''
       SELECT

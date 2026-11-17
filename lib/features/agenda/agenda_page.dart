@@ -7,6 +7,8 @@ import 'widgets/faixa_semana.dart';
 import 'widgets/lista_do_dia.dart';
 import 'widgets/proximos_atendimentos.dart';
 import 'widgets/grade_horarios.dart';
+import 'widgets/novo_horario_livre.dart';
+
 
 
 class AgendaPage extends StatefulWidget {
@@ -75,19 +77,159 @@ class _AgendaPageState extends State<AgendaPage> {
     });
   }
 
-    /// Abre o formulário; se marcar, vai para o dia e recarrega a agenda.
-  Future<void> _novoAtendimento() async {
-    final marcado = await mostrarNovoAtendimento(
+     /// Abre o formulário de horário livre; se marcar, vai para o primeiro dia
+  /// marcado e mostra os dias que ficaram de fora, se houver.
+  Future<void> _novoHorarioLivre() async {
+    final resultado = await mostrarNovoHorarioLivre(
       context,
       _diaSelecionado,
       _service,
     );
+    if (resultado == null || !mounted) return;
+
+    final quantidade = resultado.criados.length;
+    _mostrarMensagem(
+      quantidade == 1
+          ? 'Horário livre marcado'
+          : '$quantidade horários livres marcados',
+    );
+    setState(() {
+      _diaSelecionado = soData(resultado.criados.first);
+      // Vários dias: abre a visão Semana para ver todos
+      _verSemana = quantidade > 1;
+    });
+    _carregar();
+
+    if (resultado.ignorados.isNotEmpty) {
+      await _mostrarIgnorados(resultado.ignorados);
+    }
+  }
+
+  
+  Future<void> _mostrarIgnorados(List<DiaIgnorado> ignorados) {
+    return showDialog<void>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Alguns dias não foram marcados'),
+        content: SizedBox(
+          width: 440,
+          child: SingleChildScrollView(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                for (final item in ignorados)
+                  Padding(
+                    padding: const EdgeInsets.only(bottom: 10),
+                    child: Text.rich(
+                      TextSpan(
+                        children: [
+                          TextSpan(
+                            text: '${diaPorExtenso(item.dia)}\n',
+                            style: const TextStyle(fontWeight: FontWeight.w600),
+                          ),
+                          TextSpan(
+                            text: item.motivo,
+                            style: const TextStyle(
+                              color: AppColors.textoSecundario,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+              ],
+            ),
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('Entendi'),
+          ),
+        ],
+      ),
+    );
+  }
+
+
+  /// Ao tocar num horário livre: marcar um particular nele ou removê-lo.
+  Future<void> _tocarHorarioLivre(HorarioLivre livre) async {
+    final jaPassou = livre.fim.isBefore(DateTime.now());
+    final escolha = await showDialog<String>(
+      context: context,
+      builder: (context) => SimpleDialog(
+        title: Text(
+          'Horário livre · ${hora(livre.inicio)} – ${hora(livre.fim)}',
+        ),
+        children: [
+          if (!jaPassou)
+            SimpleDialogOption(
+              onPressed: () => Navigator.pop(context, 'particular'),
+              child: const ListTile(
+                leading: Icon(Icons.person_add_alt_1_outlined),
+                title: Text('Marcar atendimento particular'),
+              ),
+            ),
+          SimpleDialogOption(
+            onPressed: () => Navigator.pop(context, 'remover'),
+            child: const ListTile(
+              leading: Icon(Icons.delete_outline),
+              title: Text('Remover horário livre'),
+            ),
+          ),
+        ],
+      ),
+    );
+    if (!mounted) return;
+
+    if (escolha == 'particular') {
+      await _novoParticular(livre);
+    } else if (escolha == 'remover') {
+      await _removerHorarioLivre(livre);
+    }
+  }
+
+  Future<void> _novoParticular(HorarioLivre livre) async {
+    final marcado = await mostrarNovoAtendimento(context, livre, _service);
     if (marcado == null) return;
 
-    _mostrarMensagem('Atendimento marcado');
-    setState(() => _diaSelecionado = soData(marcado));
+    _mostrarMensagem('Atendimento particular marcado');
     _carregar();
   }
+
+  Future<void> _removerHorarioLivre(HorarioLivre livre) async {
+    final confirmou = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Remover horário livre?'),
+        content: Text(
+          '${diaPorExtenso(livre.inicio)}, '
+          '${hora(livre.inicio)} – ${hora(livre.fim)}',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: const Text('Cancelar'),
+          ),
+          TextButton(
+            onPressed: () => Navigator.pop(context, true),
+            child: const Text('Remover'),
+          ),
+        ],
+      ),
+    );
+    if (confirmou != true) return;
+
+    try {
+      await _service.removerHorarioLivre(livre.id);
+      _mostrarMensagem('Horário livre removido');
+      _carregar();
+    } on AgendaException catch (e) {
+      _mostrarMensagem(e.mensagem);
+    }
+  }
+
 
   /// Confirma e remove um atendimento particular.
   Future<void> _removerParticular(Atendimento particular) async {
@@ -168,7 +310,7 @@ class _AgendaPageState extends State<AgendaPage> {
     );
   }
 
-  Widget _titulo() {
+    Widget _titulo() {
     return Row(
       children: [
         Container(
@@ -188,23 +330,23 @@ class _AgendaPageState extends State<AgendaPage> {
                 'Agenda completa',
                 style: Theme.of(context).textTheme.headlineSmall,
               ),
-                      const SizedBox(width: 12),
-        FilledButton.icon(
-          onPressed: _novoAtendimento,
-          icon: const Icon(Icons.add),
-          label: const Text('Novo atendimento'),
-        ),
-
               const Text(
-                'Visualize seus atendimentos da semana',
+                'Toque num horário livre para marcar um particular',
                 style: TextStyle(color: AppColors.textoSecundario),
               ),
             ],
           ),
         ),
+        const SizedBox(width: 12),
+        FilledButton.icon(
+          onPressed: _novoHorarioLivre,
+          icon: const Icon(Icons.add),
+          label: const Text('Horário livre'),
+        ),
       ],
     );
   }
+
 
   Widget _painelAgenda() {
     final dados = _dados;
@@ -266,6 +408,7 @@ class _AgendaPageState extends State<AgendaPage> {
                       _inicioSemana.add(Duration(days: i)),
                   ],
                   dados: dados,
+                  aoTocarLivre: _tocarHorarioLivre,
                 ),
               )
             // Semana no celular: lista agrupada por dia
@@ -276,6 +419,8 @@ class _AgendaPageState extends State<AgendaPage> {
                 dia: _diaSelecionado,
                 dados: dados,
                 aoTocarParticular: _removerParticular,
+                aoTocarLivre: _tocarHorarioLivre,
+
               ),
 
 
@@ -289,7 +434,10 @@ class _AgendaPageState extends State<AgendaPage> {
   List<Widget> _listaDaSemana(AgendaDados dados) {
     final diasComAtendimento = [
       for (var i = 0; i < 7; i++) _inicioSemana.add(Duration(days: i)),
-    ].where((dia) => dados.atendimentos.any((a) => mesmoDia(a.inicio, dia))).toList();
+        ].where((dia) =>
+        dados.atendimentos.any((a) => mesmoDia(a.inicio, dia)) ||
+        dados.livres.any((l) => mesmoDia(l.inicio, dia))).toList();
+
 
     if (diasComAtendimento.isEmpty) {
       return const [
@@ -312,6 +460,8 @@ class _AgendaPageState extends State<AgendaPage> {
           dia: diasComAtendimento[i],
           dados: dados,
           aoTocarParticular: _removerParticular,
+          aoTocarLivre: _tocarHorarioLivre,
+
         ),
       ],
     ];

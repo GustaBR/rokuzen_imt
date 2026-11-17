@@ -3,27 +3,24 @@ import 'package:flutter/material.dart';
 import '../../../core/theme/app_colors.dart';
 import '../agenda_service.dart';
 import '../datas.dart';
+import 'campo_hora.dart';
 
 Future<DateTime?> mostrarNovoAtendimento(
   BuildContext context,
-  DateTime diaInicial,
+  HorarioLivre livre,
   AgendaService service,
 ) {
   return showDialog<DateTime>(
     context: context,
-    builder: (_) =>
-        _NovoAtendimentoDialog(diaInicial: diaInicial, service: service),
+    builder: (_) => _NovoAtendimentoDialog(livre: livre, service: service),
   );
 }
 
 class _NovoAtendimentoDialog extends StatefulWidget {
-  final DateTime diaInicial;
+  final HorarioLivre livre;
   final AgendaService service;
 
-  const _NovoAtendimentoDialog({
-    required this.diaInicial,
-    required this.service,
-  });
+  const _NovoAtendimentoDialog({required this.livre, required this.service});
 
   @override
   State<_NovoAtendimentoDialog> createState() => _NovoAtendimentoDialogState();
@@ -33,22 +30,25 @@ class _NovoAtendimentoDialogState extends State<_NovoAtendimentoDialog> {
   final _formKey = GlobalKey<FormState>();
   final _clienteController = TextEditingController();
   final _observacaoController = TextEditingController();
-  late DateTime _dia;
-  TimeOfDay _inicio = const TimeOfDay(hour: 18, minute: 0);
-  TimeOfDay _fim = const TimeOfDay(hour: 19, minute: 0);
+  late TimeOfDay _inicio;
+  late TimeOfDay _fim;
+  late final List<int> _horas;
   bool _salvando = false;
   String? _erro;
 
-  /// Horas (06 a 23) e minutos (de 15 em 15) dos campos de horário.
-  static final _horas = [for (var hora = 6; hora <= 23; hora++) hora];
-  static const _minutos = [0, 15, 30, 45];
+  HorarioLivre get _livre => widget.livre;
 
   @override
   void initState() {
     super.initState();
-    // Não deixa começar num dia que já passou
-    final hoje = soData(DateTime.now());
-    _dia = widget.diaInicial.isBefore(hoje) ? hoje : widget.diaInicial;
+    final fimPadrao = _livre.inicio.add(const Duration(hours: 1));
+    _inicio = TimeOfDay.fromDateTime(_livre.inicio);
+    _fim = TimeOfDay.fromDateTime(
+      fimPadrao.isAfter(_livre.fim) ? _livre.fim : fimPadrao,
+    );
+    _horas = [
+      for (var hora = _livre.inicio.hour; hora <= _livre.fim.hour; hora++) hora,
+    ];
   }
 
   @override
@@ -58,19 +58,13 @@ class _NovoAtendimentoDialogState extends State<_NovoAtendimentoDialog> {
     super.dispose();
   }
 
-  Future<void> _escolherDia() async {
-    final hoje = soData(DateTime.now());
-    final dia = await showDatePicker(
-      context: context,
-      initialDate: _dia,
-      firstDate: hoje,
-      lastDate: hoje.add(const Duration(days: 365)),
-    );
-    if (dia != null) setState(() => _dia = dia);
-  }
-
-  DateTime _comHora(TimeOfDay hora) =>
-      DateTime(_dia.year, _dia.month, _dia.day, hora.hour, hora.minute);
+  DateTime _comHora(TimeOfDay hora) => DateTime(
+        _livre.inicio.year,
+        _livre.inicio.month,
+        _livre.inicio.day,
+        hora.hour,
+        hora.minute,
+      );
 
   Future<void> _salvar() async {
     if (!_formKey.currentState!.validate()) return;
@@ -79,6 +73,13 @@ class _NovoAtendimentoDialogState extends State<_NovoAtendimentoDialog> {
     final fim = _comHora(_fim);
     if (!fim.isAfter(inicio)) {
       setState(() => _erro = 'O horário final precisa ser depois do inicial');
+      return;
+    }
+    if (!_livre.contem(inicio, fim)) {
+      setState(
+        () => _erro = 'O atendimento precisa caber no horário livre '
+            '(${hora(_livre.inicio)} – ${hora(_livre.fim)})',
+      );
       return;
     }
 
@@ -116,34 +117,55 @@ class _NovoAtendimentoDialogState extends State<_NovoAtendimentoDialog> {
               mainAxisSize: MainAxisSize.min,
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
-                const Text(
-                  'Os atendimentos da Rokuzen são marcados pela secretaria.',
-                  style: TextStyle(fontSize: 12, color: AppColors.textoSecundario),
+                Container(
+                  padding: const EdgeInsets.all(12),
+                  decoration: BoxDecoration(
+                    color: AppColors.creme,
+                    borderRadius: BorderRadius.circular(10),
+                    border: Border.all(color: AppColors.cinzaClaro),
+                  ),
+                  child: Row(
+                    children: [
+                      const Icon(Icons.event_available_outlined, size: 20),
+                      const SizedBox(width: 10),
+                      Expanded(
+                        child: Text(
+                          '${diaPorExtenso(_livre.inicio)}\n'
+                          'Horário livre: ${hora(_livre.inicio)} – '
+                          '${hora(_livre.fim)}',
+                        ),
+                      ),
+                    ],
+                  ),
                 ),
                 const SizedBox(height: 16),
                 TextFormField(
                   controller: _clienteController,
                   maxLength: 100,
-                  decoration: _decoracao('Cliente', dica: 'Ex.: João'),
+                  decoration: decoracaoDeDialogo('Cliente', dica: 'Ex.: João'),
                   validator: (valor) => (valor == null || valor.trim().isEmpty)
                       ? 'Informe o cliente'
                       : null,
                 ),
                 const SizedBox(height: 8),
-                OutlinedButton.icon(
-                  onPressed: _escolherDia,
-                  icon: const Icon(Icons.calendar_today_outlined),
-                  label: Text(diaPorExtenso(_dia)),
+                CampoHora(
+                  rotulo: 'Início',
+                  valor: _inicio,
+                  horas: _horas,
+                  aoMudar: (hora) => setState(() => _inicio = hora),
                 ),
-                const SizedBox(height: 12),
-                _campoHora('Início', _inicio, (h) => _inicio = h),
                 const SizedBox(height: 8),
-                _campoHora('Fim', _fim, (h) => _fim = h),
+                CampoHora(
+                  rotulo: 'Fim',
+                  valor: _fim,
+                  horas: _horas,
+                  aoMudar: (hora) => setState(() => _fim = hora),
+                ),
                 const SizedBox(height: 12),
                 TextFormField(
                   controller: _observacaoController,
                   maxLength: 255,
-                  decoration: _decoracao(
+                  decoration: decoracaoDeDialogo(
                     'Observação (opcional)',
                     dica: 'Ex.: domicílio, massagem relaxante',
                   ),
@@ -177,79 +199,6 @@ class _NovoAtendimentoDialogState extends State<_NovoAtendimentoDialog> {
               : const Text('Salvar'),
         ),
       ],
-    );
-  }
-
-  /// Horário em dois campos curtos: hora e minuto.
-  Widget _campoHora(
-    String rotulo,
-    TimeOfDay valor,
-    void Function(TimeOfDay) aoMudar,
-  ) {
-    return Row(
-      children: [
-        SizedBox(
-          width: 64,
-          child: Text(
-            rotulo,
-            style: const TextStyle(fontWeight: FontWeight.w600),
-          ),
-        ),
-        Expanded(
-          child: DropdownButtonFormField<int>(
-            initialValue: valor.hour,
-            decoration: _decoracao('hora'),
-            menuMaxHeight: 300,
-            items: [
-              for (final hora in _horas)
-                DropdownMenuItem(
-                  value: hora,
-                  child: Text(hora.toString().padLeft(2, '0')),
-                ),
-            ],
-            onChanged: (hora) {
-              if (hora == null) return;
-              setState(() => aoMudar(TimeOfDay(hour: hora, minute: valor.minute)));
-            },
-          ),
-        ),
-        const Padding(
-          padding: EdgeInsets.symmetric(horizontal: 4),
-          child: Text(':', style: TextStyle(fontSize: 20)),
-        ),
-        Expanded(
-          child: DropdownButtonFormField<int>(
-            initialValue: valor.minute,
-            decoration: _decoracao('min'),
-            items: [
-              for (final minuto in _minutos)
-                DropdownMenuItem(
-                  value: minuto,
-                  child: Text(minuto.toString().padLeft(2, '0')),
-                ),
-            ],
-            onChanged: (minuto) {
-              if (minuto == null) return;
-              setState(() => aoMudar(TimeOfDay(hour: valor.hour, minute: minuto)));
-            },
-          ),
-        ),
-      ],
-    );
-  }
-
-  /// O tema deixa os campos brancos e sem borda; dentro da janela
-  /// (que também é branca) eles precisam de borda para aparecer.
-  InputDecoration _decoracao(String rotulo, {String? dica}) {
-    return InputDecoration(
-      labelText: rotulo,
-      hintText: dica,
-      filled: true,
-      fillColor: AppColors.creme,
-      border: OutlineInputBorder(
-        borderRadius: BorderRadius.circular(10),
-        borderSide: const BorderSide(color: AppColors.cinzaClaro),
-      ),
     );
   }
 }

@@ -6,8 +6,6 @@ import '../../core/texto.dart';
 import '../../core/api/api_config.dart';
 import '../../core/sessao.dart';
 
-/// Um atendimento da agenda: da Rokuzen (tabela atd) ou particular
-/// (tabela maua_atendimento_particular).
 class Atendimento {
   final DateTime inicio;
   final DateTime? fim;
@@ -15,7 +13,7 @@ class Atendimento {
   final String servico;
   final String? clienteId;
 
-  /// Preenchido só nos atendimentos particulares.
+  
   final int? particularId;
 
   const Atendimento({
@@ -67,13 +65,61 @@ class Turno {
 }
 
 
+class HorarioLivre {
+  final int id;
+  final DateTime inicio;
+  final DateTime fim;
+
+  const HorarioLivre({
+    required this.id,
+    required this.inicio,
+    required this.fim,
+  });
+
+  factory HorarioLivre.fromJson(Map<String, dynamic> json) {
+    return HorarioLivre(
+      id: json['id'] as int,
+      inicio: DateTime.parse(json['inicio'] as String),
+      fim: DateTime.parse(json['fim'] as String),
+    );
+  }
+
+  bool contem(DateTime de, DateTime ate) =>
+      !de.isBefore(inicio) && !ate.isAfter(fim);
+}
+
+
+class DiaIgnorado {
+  final DateTime dia;
+  final String motivo;
+
+  const DiaIgnorado({required this.dia, required this.motivo});
+}
+
+class ResultadoHorariosLivres {
+  final List<DateTime> criados;
+  final List<DiaIgnorado> ignorados;
+
+  const ResultadoHorariosLivres({
+    required this.criados,
+    required this.ignorados,
+  });
+}
+
+
+
 
 
 class AgendaDados {
   final List<Atendimento> atendimentos;
   final List<Turno> turnos;
+  final List<HorarioLivre> livres;
 
-  const AgendaDados({required this.atendimentos, required this.turnos});
+  const AgendaDados({
+    required this.atendimentos,
+    required this.turnos,
+    required this.livres,
+  });
 }
 
 class AgendaException implements Exception {
@@ -82,8 +128,8 @@ class AgendaException implements Exception {
   const AgendaException(this.mensagem);
 }
 
+
 class AgendaService {
-  /// Busca a agenda do terapeuta logado entre [inicio] e [fim] (fim não incluso).
   Future<AgendaDados> buscar(DateTime inicio, DateTime fim) async {
     final dados = await _buscarJson(
       Uri.parse('${ApiConfig.baseUrl}/api/agenda').replace(
@@ -95,7 +141,7 @@ class AgendaService {
       ),
     ) as Map<String, dynamic>;
 
-    // Rokuzen e particulares numa lista só, em ordem de horário
+    
     final atendimentos = [
       for (final item in dados['sessoes'] as List)
         Atendimento.fromJson(item as Map<String, dynamic>),
@@ -103,13 +149,18 @@ class AgendaService {
         Atendimento.particularFromJson(item as Map<String, dynamic>),
     ]..sort((a, b) => a.inicio.compareTo(b.inicio));
 
-    return AgendaDados(
+      return AgendaDados(
       atendimentos: atendimentos,
       turnos: [
         for (final item in dados['escala'] as List)
           Turno.fromJson(item as Map<String, dynamic>),
       ],
+      livres: [
+        for (final item in dados['livres'] as List)
+          HorarioLivre.fromJson(item as Map<String, dynamic>),
+      ],
     );
+
   }
 
 
@@ -143,7 +194,6 @@ class AgendaService {
     }
   }
 
-  /// Remove um atendimento particular do terapeuta logado.
   Future<void> removerParticular(int id) async {
     final resposta = await _enviar(
       () => http.delete(
@@ -156,6 +206,64 @@ class AgendaService {
       throw AgendaException(_mensagemDeErro(resposta));
     }
   }
+
+      /// Sinaliza horários livres do terapeuta logado, um período por dia.
+  Future<ResultadoHorariosLivres> criarHorariosLivres(
+    List<(DateTime, DateTime)> periodos,
+  ) async {
+    final resposta = await _enviar(
+      () => http.post(
+        Uri.parse('${ApiConfig.baseUrl}/api/horarios_livres'),
+        headers: {'Content-Type': 'application/json'},
+        body: jsonEncode({
+          'terapeuta': _idDoTerapeuta(),
+          'periodos': [
+            for (final (inicio, fim) in periodos)
+              {
+                'inicio': inicio.toIso8601String(),
+                'fim': fim.toIso8601String(),
+              },
+          ],
+        }),
+      ),
+    );
+    if (resposta.statusCode != 201) {
+      throw AgendaException(_mensagemDeErro(resposta));
+    }
+
+    final dados =
+        jsonDecode(utf8.decode(resposta.bodyBytes)) as Map<String, dynamic>;
+    return ResultadoHorariosLivres(
+      criados: [
+        for (final item in dados['criados'] as List)
+          DateTime.parse(item as String),
+      ],
+      ignorados: [
+        for (final item
+            in (dados['ignorados'] as List).cast<Map<String, dynamic>>())
+          DiaIgnorado(
+            dia: DateTime.parse(item['inicio'] as String),
+            motivo: item['motivo'] as String,
+          ),
+      ],
+    );
+  }
+
+
+  
+  Future<void> removerHorarioLivre(int id) async {
+    final resposta = await _enviar(
+      () => http.delete(
+        Uri.parse('${ApiConfig.baseUrl}/api/horarios_livres/$id').replace(
+          queryParameters: {'terapeuta': _idDoTerapeuta()},
+        ),
+      ),
+    );
+    if (resposta.statusCode != 200) {
+      throw AgendaException(_mensagemDeErro(resposta));
+    }
+  }
+
 
   String _idDoTerapeuta() {
     final usuario = Sessao.usuario;
