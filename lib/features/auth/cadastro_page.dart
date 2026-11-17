@@ -7,6 +7,9 @@ import '../../shared/widgets/auth_layout.dart';
 import 'auth_service.dart';
 import 'widgets/campo_rotulado.dart';
 
+enum _TipoConta { cliente, terapeuta }
+
+/// Cadastro de conta do app, para clientes e terapeutas.
 class CadastroPage extends StatefulWidget {
   const CadastroPage({super.key});
 
@@ -28,9 +31,12 @@ class _CadastroPageState extends State<CadastroPage> {
   final _mascaraCelular = MaskTextInputFormatter(mask: '(##) #####-####');
   final _mascaraData = MaskTextInputFormatter(mask: '##/##/####');
 
+  _TipoConta _tipo = _TipoConta.cliente;
   bool _ocultarSenha = true;
   bool _carregando = false;
   String? _mensagemErro;
+
+  bool get _terapeuta => _tipo == _TipoConta.terapeuta;
 
   @override
   void dispose() {
@@ -43,6 +49,7 @@ class _CadastroPageState extends State<CadastroPage> {
     super.dispose();
   }
 
+  /// "20/05/2001" → DateTime, ou null se a data for inválida.
   DateTime? _lerData(String texto) {
     final partes = texto.split('/');
     if (partes.length != 3) return null;
@@ -66,14 +73,24 @@ class _CadastroPageState extends State<CadastroPage> {
     });
 
     try {
-      await _authService.cadastrar(
-        nome: _nomeController.text.trim(),
-        email: _emailController.text.trim(),
-        celular: _celularController.text.trim(),
-        cpf: _mascaraCpf.getUnmaskedText(),
-        nascimento: _lerData(_nascimentoController.text)!,
-        senha: _senhaController.text,
-      );
+      final nascimento = _lerData(_nascimentoController.text)!;
+      if (_terapeuta) {
+        await _authService.cadastrarTerapeuta(
+          email: _emailController.text.trim(),
+          cpf: _mascaraCpf.getUnmaskedText(),
+          nascimento: nascimento,
+          senha: _senhaController.text,
+        );
+      } else {
+        await _authService.cadastrar(
+          nome: _nomeController.text.trim(),
+          email: _emailController.text.trim(),
+          celular: _celularController.text.trim(),
+          cpf: _mascaraCpf.getUnmaskedText(),
+          nascimento: nascimento,
+          senha: _senhaController.text,
+        );
+      }
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('Conta criada! Faça login para entrar.')),
@@ -101,20 +118,41 @@ class _CadastroPageState extends State<CadastroPage> {
                     color: AppColors.textoPrincipal,
                   ),
             ),
-            const SizedBox(height: 4),
-            const Text(
-              'Acumule selos a cada sessão e troque por recompensas.',
-              style: TextStyle(color: AppColors.textoSecundario),
+            const SizedBox(height: 16),
+            SegmentedButton<_TipoConta>(
+              segments: const [
+                ButtonSegment(value: _TipoConta.cliente, label: Text('Sou cliente')),
+                ButtonSegment(
+                  value: _TipoConta.terapeuta,
+                  label: Text('Sou terapeuta'),
+                ),
+              ],
+              selected: {_tipo},
+              onSelectionChanged: (selecao) => setState(() {
+                _tipo = selecao.first;
+                _mensagemErro = null;
+              }),
+            ),
+            const SizedBox(height: 12),
+            Text(
+              _terapeuta
+                  ? 'Use o CPF e a data de nascimento do seu cadastro na Rokuzen.'
+                  : 'Acumule selos a cada sessão e troque por recompensas.',
+              style: const TextStyle(color: AppColors.textoSecundario),
             ),
             const SizedBox(height: 24),
-            CampoRotulado(
-              rotulo: 'Nome completo',
-              controller: _nomeController,
-              validador: (valor) => (valor == null || valor.trim().isEmpty)
-                  ? 'Informe seu nome'
-                  : null,
-            ),
-            const SizedBox(height: 16),
+            // Nome e celular só para clientes: o terapeuta já tem esses
+            // dados no cadastro da Rokuzen
+            if (!_terapeuta) ...[
+              CampoRotulado(
+                rotulo: 'Nome completo',
+                controller: _nomeController,
+                validador: (valor) => (valor == null || valor.trim().isEmpty)
+                    ? 'Informe seu nome'
+                    : null,
+              ),
+              const SizedBox(height: 16),
+            ],
             CampoRotulado(
               rotulo: 'E-mail',
               controller: _emailController,
@@ -124,16 +162,18 @@ class _CadastroPageState extends State<CadastroPage> {
                   : null,
             ),
             const SizedBox(height: 16),
-            CampoRotulado(
-              rotulo: 'Celular',
-              controller: _celularController,
-              tipoTeclado: TextInputType.phone,
-              formatadores: [_mascaraCelular],
-              validador: (_) => _mascaraCelular.getUnmaskedText().length < 10
-                  ? 'Informe o celular com DDD'
-                  : null,
-            ),
-            const SizedBox(height: 16),
+            if (!_terapeuta) ...[
+              CampoRotulado(
+                rotulo: 'Celular',
+                controller: _celularController,
+                tipoTeclado: TextInputType.phone,
+                formatadores: [_mascaraCelular],
+                validador: (_) => _mascaraCelular.getUnmaskedText().length < 10
+                    ? 'Informe o celular com DDD'
+                    : null,
+              ),
+              const SizedBox(height: 16),
+            ],
             CampoRotulado(
               rotulo: 'CPF',
               controller: _cpfController,

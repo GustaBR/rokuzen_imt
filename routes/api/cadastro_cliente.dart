@@ -52,7 +52,13 @@ Future<Response> onRequest(RequestContext context) async {
 
   try {
     final emailUsado = await pool.execute(
-      'SELECT 1 FROM maua_cli_acesso WHERE email = :email LIMIT 1',
+      '''
+      SELECT 1 FROM maua_cli_acesso WHERE email = :email
+      UNION
+      SELECT 1 FROM maua_terapeuta_acesso WHERE email = :email
+      LIMIT 1
+      ''',
+
       {'email': email},
     );
     if (emailUsado.rows.isNotEmpty) {

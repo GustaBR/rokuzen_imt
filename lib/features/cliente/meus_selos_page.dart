@@ -400,7 +400,6 @@ class _ProximaSessao extends StatelessWidget {
   Widget _comSessao(ProximaSessao sessao) {
     return Row(
       children: [
-        // "Calendariozinho" com o dia em destaque
         Container(
           width: 72,
           padding: const EdgeInsets.symmetric(vertical: 10),

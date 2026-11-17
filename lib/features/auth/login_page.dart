@@ -70,11 +70,11 @@ class _LoginPageState extends State<LoginPage> {
             ),
             const SizedBox(height: 32),
             CampoRotulado(
-              rotulo: 'Usuário',
+              rotulo: 'E-mail',
               controller: _usuarioController,
               validador: (valor) {
                 if (valor == null || valor.trim().isEmpty) {
-                  return 'Informe o usuário';
+                  return 'Informe o e-mail';
                 }
                 return null;
               },

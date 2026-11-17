@@ -66,44 +66,8 @@ class Turno {
   }
 }
 
-/// Paciente encontrado na busca (para marcar atendimento Rokuzen).
-class PacienteResumo {
-  final String id;
-  final String nome;
-  final String? nascimento;
-  final String? celular;
 
-  const PacienteResumo({
-    required this.id,
-    required this.nome,
-    required this.nascimento,
-    required this.celular,
-  });
 
-  factory PacienteResumo.fromJson(Map<String, dynamic> json) {
-    return PacienteResumo(
-      id: json['id'] as String,
-      nome: json['nome'] as String? ?? 'Sem nome',
-      nascimento: json['nascimento'] as String?,
-      celular: json['celular'] as String?,
-    );
-  }
-}
-
-/// Serviço da unidade (tabela tpr).
-class Servico {
-  final String id;
-  final String nome;
-
-  const Servico({required this.id, required this.nome});
-
-  factory Servico.fromJson(Map<String, dynamic> json) {
-    return Servico(
-      id: json['id'] as String,
-      nome: limparNomeServico(json['nome'] as String? ?? ''),
-    );
-  }
-}
 
 class AgendaDados {
   final List<Atendimento> atendimentos;
@@ -148,61 +112,11 @@ class AgendaService {
     );
   }
 
-  Future<List<PacienteResumo>> buscarPacientes(String termo) async {
-    final dados = await _buscarJson(
-      Uri.parse('${ApiConfig.baseUrl}/api/busca_pacientes')
-          .replace(queryParameters: {'termo': termo}),
-    ) as List;
-    return [
-      for (final item in dados)
-        PacienteResumo.fromJson(item as Map<String, dynamic>),
-    ];
-  }
 
-  /// Serviços da unidade escolhida no login.
-  Future<List<Servico>> buscarServicos() async {
-    final dados = await _buscarJson(
-      Uri.parse('${ApiConfig.baseUrl}/api/servicos')
-          .replace(queryParameters: {'unidade': _idDaUnidade()}),
-    ) as List;
-    return [
-      for (final item in dados) Servico.fromJson(item as Map<String, dynamic>),
-    ];
-  }
 
-  Future<List<String>> buscarDuracoes(String servicoId) async {
-    final dados = await _buscarJson(
-      Uri.parse('${ApiConfig.baseUrl}/api/duracoes')
-          .replace(queryParameters: {'servico': servicoId}),
-    ) as List;
-    return [for (final item in dados) item as String];
-  }
 
-  /// Marca um atendimento da Rokuzen para o terapeuta logado.
-  Future<void> criarAtendimentoRokuzen({
-    required String pacienteId,
-    required String servicoId,
-    required String duracao,
-    required DateTime inicio,
-  }) async {
-    final resposta = await _enviar(
-      () => http.post(
-        Uri.parse('${ApiConfig.baseUrl}/api/atendimentos'),
-        headers: {'Content-Type': 'application/json'},
-        body: jsonEncode({
-          'terapeuta': _idDoTerapeuta(),
-          'unidade': _idDaUnidade(),
-          'paciente': pacienteId,
-          'servico': servicoId,
-          'duracao': duracao,
-          'inicio': inicio.toIso8601String(),
-        }),
-      ),
-    );
-    if (resposta.statusCode != 201) {
-      throw AgendaException(_mensagemDeErro(resposta));
-    }
-  }
+
+
 
   /// Registra um atendimento particular do terapeuta logado.
   Future<void> criarParticular({
@@ -249,16 +163,6 @@ class AgendaService {
       throw const AgendaException('Sessão expirada. Faça login novamente.');
     }
     return usuario.id;
-  }
-
-  String _idDaUnidade() {
-    final unidade = Sessao.unidade;
-    if (unidade == null) {
-      throw const AgendaException(
-        'Nenhuma unidade selecionada. Faça login novamente.',
-      );
-    }
-    return unidade.id;
   }
 
   /// GET que devolve o JSON da resposta (ou lança AgendaException).
