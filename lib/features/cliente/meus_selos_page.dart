@@ -286,7 +286,7 @@ class _CartaoDeSelos extends StatelessWidget {
                     ClipRRect(
                       borderRadius: BorderRadius.circular(10),
                       child: LinearProgressIndicator(
-                        value: dados.saldo / proxima.selos,
+                        value: preenchidos / total,
                         minHeight: 8,
                         color: branco,
                         backgroundColor: branco.withValues(alpha: 0.25),
@@ -294,10 +294,14 @@ class _CartaoDeSelos extends StatelessWidget {
                     ),
                     const SizedBox(height: 8),
                     Text(
-                      'Faltam ${proxima.selos - dados.saldo} selos para: '
-                      '${proxima.nome} 🎁',
+                      proxima.selos - dados.saldo == 1
+                          ? 'Falta 1 selo para: ${proxima.nome} 🎁'
+                          : 'Faltam ${proxima.selos - dados.saldo} selos para: '
+                              '${proxima.nome} 🎁',
                       style: TextStyle(color: branco),
                     ),
+
+
                   ] else
                     Text(
                       'Você já pode resgatar qualquer recompensa! 🎉',
