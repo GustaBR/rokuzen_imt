@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 import '../../../core/theme/app_colors.dart';
+import 'package:flutter/services.dart';
+
 
 /// Campo de texto com o título em cima, usado nas telas de autenticação.
 class CampoRotulado extends StatelessWidget {
@@ -9,6 +11,8 @@ class CampoRotulado extends StatelessWidget {
   final TextInputType? tipoTeclado;
   final Widget? iconeFinal;
   final FormFieldValidator<String>? validador;
+  final List<TextInputFormatter>? formatadores;
+
 
   const CampoRotulado({
     super.key,
@@ -18,6 +22,7 @@ class CampoRotulado extends StatelessWidget {
     this.tipoTeclado,
     this.iconeFinal,
     this.validador,
+    this.formatadores,
   });
 
   @override
@@ -37,6 +42,7 @@ class CampoRotulado extends StatelessWidget {
           controller: controller,
           obscureText: ocultarTexto,
           keyboardType: tipoTeclado,
+          inputFormatters: formatadores,
           validator: validador,
           decoration: InputDecoration(
             fillColor: AppColors.creme,

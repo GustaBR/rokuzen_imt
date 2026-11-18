@@ -83,6 +83,23 @@ Future<Response> onRequest(RequestContext context) async {
       filtros,
     );
 
+        
+    final livres = await pool.execute(
+      '''
+      SELECT
+        id,
+        DATE_FORMAT(inicio, '%Y-%m-%dT%H:%i:%s') AS inicio,
+        DATE_FORMAT(fim, '%Y-%m-%dT%H:%i:%s') AS fim
+      FROM maua_horario_livre
+      WHERE usr_ukey = :terapeuta
+        AND inicio >= :inicio
+        AND inicio < :fim
+      ORDER BY inicio
+      ''',
+      filtros,
+    );
+
+
     return Response.json(
       body: {
         'sessoes': [
@@ -112,6 +129,16 @@ Future<Response> onRequest(RequestContext context) async {
               'fim': linha.typedColByName<String>('fim'),
             },
         ],
+
+          'livres': [
+          for (final linha in livres.rows)
+            {
+              'id': linha.typedColByName<int>('id'),
+              'inicio': linha.typedColByName<String>('inicio'),
+              'fim': linha.typedColByName<String>('fim'),
+            },
+        ],
+
       },
     );
   } catch (e, stackTrace) {

@@ -45,7 +45,7 @@ class _LoginPageState extends State<LoginPage> {
       );
       Sessao.iniciar(usuario);
       if (!mounted) return;
-      context.go('/');
+      context.go(usuario.ehCliente ? '/cliente/selos' : '/');
     } on AuthException catch (e) {
       setState(() => _mensagemErro = e.mensagem);
     } finally {
@@ -70,11 +70,11 @@ class _LoginPageState extends State<LoginPage> {
             ),
             const SizedBox(height: 32),
             CampoRotulado(
-              rotulo: 'Usuário',
+              rotulo: 'E-mail',
               controller: _usuarioController,
               validador: (valor) {
                 if (valor == null || valor.trim().isEmpty) {
-                  return 'Informe o usuário';
+                  return 'Informe o e-mail';
                 }
                 return null;
               },
@@ -134,10 +134,18 @@ class _LoginPageState extends State<LoginPage> {
                         width: 24,
                         height: 24,
                         child: CircularProgressIndicator(strokeWidth: 2.5),
-                      )
+                      )                      
                     : const Text('Entrar', style: TextStyle(fontSize: 22)),
               ),
             ),
+            const SizedBox(height: 12),
+            Center(
+              child: TextButton(
+                onPressed: () => context.go('/cadastro'),
+                child: const Text('Ainda não tem conta? Criar conta'),
+              ),
+            ),
+
           ],
         ),
       ),

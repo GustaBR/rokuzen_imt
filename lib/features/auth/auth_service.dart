@@ -45,4 +45,67 @@ class AuthService {
 
     return Usuario.fromJson(dados);
   }
+
+    /// Cria a conta do cliente. Lança [AuthException] se der errado.
+  Future<void> cadastrar({
+    required String nome,
+    required String email,
+    required String celular,
+    required String cpf,
+    required DateTime nascimento,
+    required String senha,
+  }) {
+    return _enviarCadastro('/api/cadastro_cliente', {
+      'nome': nome,
+      'email': email,
+      'celular': celular,
+      'cpf': cpf,
+      'nascimento': nascimento.toIso8601String().substring(0, 10),
+      'senha': senha,
+    });
+  }
+
+  
+  Future<void> cadastrarTerapeuta({
+    required String email,
+    required String cpf,
+    required DateTime nascimento,
+    required String senha,
+  }) {
+    return _enviarCadastro('/api/cadastro_terapeuta', {
+      'email': email,
+      'cpf': cpf,
+      'nascimento': nascimento.toIso8601String().substring(0, 10),
+      'senha': senha,
+    });
+  }
+
+  Future<void> _enviarCadastro(String caminho, Map<String, Object> dados) async {
+    final http.Response resposta;
+    try {
+      resposta = await http
+          .post(
+            Uri.parse('${ApiConfig.baseUrl}$caminho'),
+            headers: {'Content-Type': 'application/json'},
+            body: jsonEncode(dados),
+          )
+          .timeout(const Duration(seconds: 10));
+    } catch (_) {
+      throw const AuthException(
+        'Não foi possível conectar ao servidor. Tente novamente.',
+      );
+    }
+
+    if (resposta.statusCode == 201) return;
+
+    var mensagem = 'Não foi possível criar a conta.';
+    try {
+      final corpo =
+          jsonDecode(utf8.decode(resposta.bodyBytes)) as Map<String, dynamic>;
+      mensagem = corpo['erro'] as String? ?? mensagem;
+    } catch (_) {}
+    throw AuthException(mensagem);
+  }
+
+
 }

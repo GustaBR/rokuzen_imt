@@ -1,19 +1,41 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import '../../core/theme/app_colors.dart';
+import '../../core/sessao.dart';
+
 
 
 class HomePage extends StatefulWidget {
   final Widget child;
+  final List<String> abas;
+  final List<IconData> icones;
+  final List<String> caminhos;
+  final String caminhoPerfil;
 
   const HomePage({
     super.key,
     required this.child,
+    // Abas padrão: as do terapeuta
+    this.abas = const [
+      'Início',
+      'Agenda',
+      'Cadastrar Paciente',
+      'Histórico de consultas',
+    ],
+    this.icones = const [
+      Icons.home_outlined,
+      Icons.calendar_month_outlined,
+      Icons.people_outline,
+      Icons.assignment_outlined,
+    ],
+    this.caminhos = const ['/', '/agenda', '/pacientes/novo', '/historico'],
+    this.caminhoPerfil = '/meus-dados',
   });
 
   @override
   State<HomePage> createState() => _HomePageState();
 }
+
 
 class _HomePageState extends State<HomePage> {
 
@@ -23,26 +45,10 @@ void _selecionarAba(int index) {
 }
   
 
-  final List<String> abas = const [
-    'Início',
-    'Agenda',
-    'Cadastrar Paciente',
-    'Histórico de consultas',
-  ];
+  List<String> get abas => widget.abas;
+  List<IconData> get icones => widget.icones;
+  List<String> get caminhos => widget.caminhos;
 
-  final List<IconData> icones = const [
-    Icons.home_outlined,
-    Icons.calendar_month_outlined,
-    Icons.people_outline,
-    Icons.assignment_outlined,
-  ];
-
-  final List<String> caminhos = const [
-  '/',
-  '/agenda',
-  '/pacientes/novo',
-  '/historico',
-];
 
 
   bool get _mobile =>
@@ -110,6 +116,7 @@ void _selecionarAba(int index) {
             ElevatedButton(
               onPressed: () {
                 Navigator.pop(dialogContext);
+                Sessao.encerrar();
                 context.go('/login');
               },
               style: ElevatedButton.styleFrom(
@@ -337,7 +344,7 @@ void _selecionarAba(int index) {
       offset: const Offset(0, 45),
       onSelected: (opcao) {
         if (opcao == 'meus_dados') {
-          context.go('/meus-dados');
+          context.go(widget.caminhoPerfil);
         } else if (opcao == 'sair') {
           _confirmarSaida();
         }

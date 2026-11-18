@@ -1,12 +1,11 @@
 import 'dart:convert';
 
 import 'package:http/http.dart' as http;
+import '../../core/texto.dart';
 
 import '../../core/api/api_config.dart';
 import '../../core/sessao.dart';
 
-/// Um atendimento da agenda: da Rokuzen (tabela atd) ou particular
-/// (tabela maua_atendimento_particular).
 class Atendimento {
   final DateTime inicio;
   final DateTime? fim;
@@ -14,7 +13,7 @@ class Atendimento {
   final String servico;
   final String? clienteId;
 
-  /// Preenchido só nos atendimentos particulares.
+  
   final int? particularId;
 
   const Atendimento({
@@ -33,7 +32,7 @@ class Atendimento {
       inicio: DateTime.parse(json['inicio'] as String),
       fim: json['fim'] == null ? null : DateTime.parse(json['fim'] as String),
       cliente: json['cliente'] as String? ?? 'Cliente não informado',
-      servico: _limparNomeServico(json['servico'] as String? ?? ''),
+      servico: limparNomeServico(json['servico'] as String? ?? ''),
       clienteId: json['clienteId'] as String?,
     );
   }
@@ -65,50 +64,62 @@ class Turno {
   }
 }
 
-/// Paciente encontrado na busca (para marcar atendimento Rokuzen).
-class PacienteResumo {
-  final String id;
-  final String nome;
-  final String? nascimento;
-  final String? celular;
 
-  const PacienteResumo({
+class HorarioLivre {
+  final int id;
+  final DateTime inicio;
+  final DateTime fim;
+
+  const HorarioLivre({
     required this.id,
-    required this.nome,
-    required this.nascimento,
-    required this.celular,
+    required this.inicio,
+    required this.fim,
   });
 
-  factory PacienteResumo.fromJson(Map<String, dynamic> json) {
-    return PacienteResumo(
-      id: json['id'] as String,
-      nome: json['nome'] as String? ?? 'Sem nome',
-      nascimento: json['nascimento'] as String?,
-      celular: json['celular'] as String?,
+  factory HorarioLivre.fromJson(Map<String, dynamic> json) {
+    return HorarioLivre(
+      id: json['id'] as int,
+      inicio: DateTime.parse(json['inicio'] as String),
+      fim: DateTime.parse(json['fim'] as String),
     );
   }
+
+  bool contem(DateTime de, DateTime ate) =>
+      !de.isBefore(inicio) && !ate.isAfter(fim);
 }
 
-/// Serviço da unidade (tabela tpr).
-class Servico {
-  final String id;
-  final String nome;
 
-  const Servico({required this.id, required this.nome});
+class DiaIgnorado {
+  final DateTime dia;
+  final String motivo;
 
-  factory Servico.fromJson(Map<String, dynamic> json) {
-    return Servico(
-      id: json['id'] as String,
-      nome: _limparNomeServico(json['nome'] as String? ?? ''),
-    );
-  }
+  const DiaIgnorado({required this.dia, required this.motivo});
 }
+
+class ResultadoHorariosLivres {
+  final List<DateTime> criados;
+  final List<DiaIgnorado> ignorados;
+
+  const ResultadoHorariosLivres({
+    required this.criados,
+    required this.ignorados,
+  });
+}
+
+
+
+
 
 class AgendaDados {
   final List<Atendimento> atendimentos;
   final List<Turno> turnos;
+  final List<HorarioLivre> livres;
 
-  const AgendaDados({required this.atendimentos, required this.turnos});
+  const AgendaDados({
+    required this.atendimentos,
+    required this.turnos,
+    required this.livres,
+  });
 }
 
 class AgendaException implements Exception {
@@ -117,8 +128,8 @@ class AgendaException implements Exception {
   const AgendaException(this.mensagem);
 }
 
+
 class AgendaService {
-  /// Busca a agenda do terapeuta logado entre [inicio] e [fim] (fim não incluso).
   Future<AgendaDados> buscar(DateTime inicio, DateTime fim) async {
     final dados = await _buscarJson(
       Uri.parse('${ApiConfig.baseUrl}/api/agenda').replace(
@@ -130,7 +141,7 @@ class AgendaService {
       ),
     ) as Map<String, dynamic>;
 
-    // Rokuzen e particulares numa lista só, em ordem de horário
+    
     final atendimentos = [
       for (final item in dados['sessoes'] as List)
         Atendimento.fromJson(item as Map<String, dynamic>),
@@ -138,70 +149,25 @@ class AgendaService {
         Atendimento.particularFromJson(item as Map<String, dynamic>),
     ]..sort((a, b) => a.inicio.compareTo(b.inicio));
 
-    return AgendaDados(
+      return AgendaDados(
       atendimentos: atendimentos,
       turnos: [
         for (final item in dados['escala'] as List)
           Turno.fromJson(item as Map<String, dynamic>),
       ],
+      livres: [
+        for (final item in dados['livres'] as List)
+          HorarioLivre.fromJson(item as Map<String, dynamic>),
+      ],
     );
+
   }
 
-  Future<List<PacienteResumo>> buscarPacientes(String termo) async {
-    final dados = await _buscarJson(
-      Uri.parse('${ApiConfig.baseUrl}/api/busca_pacientes')
-          .replace(queryParameters: {'termo': termo}),
-    ) as List;
-    return [
-      for (final item in dados)
-        PacienteResumo.fromJson(item as Map<String, dynamic>),
-    ];
-  }
 
-  /// Serviços da unidade escolhida no login.
-  Future<List<Servico>> buscarServicos() async {
-    final dados = await _buscarJson(
-      Uri.parse('${ApiConfig.baseUrl}/api/servicos')
-          .replace(queryParameters: {'unidade': _idDaUnidade()}),
-    ) as List;
-    return [
-      for (final item in dados) Servico.fromJson(item as Map<String, dynamic>),
-    ];
-  }
 
-  Future<List<String>> buscarDuracoes(String servicoId) async {
-    final dados = await _buscarJson(
-      Uri.parse('${ApiConfig.baseUrl}/api/duracoes')
-          .replace(queryParameters: {'servico': servicoId}),
-    ) as List;
-    return [for (final item in dados) item as String];
-  }
 
-  /// Marca um atendimento da Rokuzen para o terapeuta logado.
-  Future<void> criarAtendimentoRokuzen({
-    required String pacienteId,
-    required String servicoId,
-    required String duracao,
-    required DateTime inicio,
-  }) async {
-    final resposta = await _enviar(
-      () => http.post(
-        Uri.parse('${ApiConfig.baseUrl}/api/atendimentos'),
-        headers: {'Content-Type': 'application/json'},
-        body: jsonEncode({
-          'terapeuta': _idDoTerapeuta(),
-          'unidade': _idDaUnidade(),
-          'paciente': pacienteId,
-          'servico': servicoId,
-          'duracao': duracao,
-          'inicio': inicio.toIso8601String(),
-        }),
-      ),
-    );
-    if (resposta.statusCode != 201) {
-      throw AgendaException(_mensagemDeErro(resposta));
-    }
-  }
+
+
 
   /// Registra um atendimento particular do terapeuta logado.
   Future<void> criarParticular({
@@ -228,7 +194,6 @@ class AgendaService {
     }
   }
 
-  /// Remove um atendimento particular do terapeuta logado.
   Future<void> removerParticular(int id) async {
     final resposta = await _enviar(
       () => http.delete(
@@ -242,22 +207,70 @@ class AgendaService {
     }
   }
 
+      /// Sinaliza horários livres do terapeuta logado, um período por dia.
+  Future<ResultadoHorariosLivres> criarHorariosLivres(
+    List<(DateTime, DateTime)> periodos,
+  ) async {
+    final resposta = await _enviar(
+      () => http.post(
+        Uri.parse('${ApiConfig.baseUrl}/api/horarios_livres'),
+        headers: {'Content-Type': 'application/json'},
+        body: jsonEncode({
+          'terapeuta': _idDoTerapeuta(),
+          'periodos': [
+            for (final (inicio, fim) in periodos)
+              {
+                'inicio': inicio.toIso8601String(),
+                'fim': fim.toIso8601String(),
+              },
+          ],
+        }),
+      ),
+    );
+    if (resposta.statusCode != 201) {
+      throw AgendaException(_mensagemDeErro(resposta));
+    }
+
+    final dados =
+        jsonDecode(utf8.decode(resposta.bodyBytes)) as Map<String, dynamic>;
+    return ResultadoHorariosLivres(
+      criados: [
+        for (final item in dados['criados'] as List)
+          DateTime.parse(item as String),
+      ],
+      ignorados: [
+        for (final item
+            in (dados['ignorados'] as List).cast<Map<String, dynamic>>())
+          DiaIgnorado(
+            dia: DateTime.parse(item['inicio'] as String),
+            motivo: item['motivo'] as String,
+          ),
+      ],
+    );
+  }
+
+
+  
+  Future<void> removerHorarioLivre(int id) async {
+    final resposta = await _enviar(
+      () => http.delete(
+        Uri.parse('${ApiConfig.baseUrl}/api/horarios_livres/$id').replace(
+          queryParameters: {'terapeuta': _idDoTerapeuta()},
+        ),
+      ),
+    );
+    if (resposta.statusCode != 200) {
+      throw AgendaException(_mensagemDeErro(resposta));
+    }
+  }
+
+
   String _idDoTerapeuta() {
     final usuario = Sessao.usuario;
     if (usuario == null) {
       throw const AgendaException('Sessão expirada. Faça login novamente.');
     }
     return usuario.id;
-  }
-
-  String _idDaUnidade() {
-    final unidade = Sessao.unidade;
-    if (unidade == null) {
-      throw const AgendaException(
-        'Nenhuma unidade selecionada. Faça login novamente.',
-      );
-    }
-    return unidade.id;
   }
 
   /// GET que devolve o JSON da resposta (ou lança AgendaException).
@@ -297,20 +310,5 @@ class AgendaService {
       '${data.day.toString().padLeft(2, '0')}';
 }
 
-/// Os nomes dos serviços no banco têm um prefixo usado para ordenar as listas
-/// (ex.: "1.Quick Massage", "D.GIFT CARD", "(2020)3.MACA"). Aqui ele é removido
-/// e os acentos são corrigidos.
-String _limparNomeServico(String nome) => _corrigirAcentos(nome)
-    .replaceFirst(RegExp(r'^(\(\d+\))?\s*\w{1,2}\.\s*'), '');
 
-/// Alguns textos do banco foram gravados em UTF-8 mas são lidos como latin1,
-/// e "Sessão" vira "SessÃ£o". Aqui o texto é convertido de volta.
-/// Se não for esse o caso, devolve o texto como está.
-String _corrigirAcentos(String texto) {
-  try {
-    return utf8.decode(latin1.encode(texto));
-  } catch (_) {
-    return texto;
-  }
-}
 

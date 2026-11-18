@@ -5,16 +5,12 @@ import 'package:flutter/material.dart';
 import '../../../core/theme/app_colors.dart';
 import '../agenda_service.dart';
 
-/// Grade de horários da agenda: uma coluna por dia, com o turno da escala
-/// ao fundo e as sessões como blocos do tamanho da duração.
-/// Com 1 dia vira a visão Dia; com 7 dias, a visão Semana.
 class GradeHorarios extends StatelessWidget {
   final List<DateTime> dias;
   final AgendaDados dados;
+  final void Function(HorarioLivre)? aoTocarLivre;
+  const GradeHorarios({super.key, required this.dias, required this.dados, this.aoTocarLivre});
 
-  const GradeHorarios({super.key, required this.dias, required this.dados});
-
-  /// Altura, em pixels, de uma hora na grade.
   static const double _alturaHora = 80;
   static const double _larguraColunaHoras = 56;
 
@@ -94,15 +90,17 @@ class GradeHorarios extends StatelessWidget {
     );
   }
 
-  /// Coluna de um dia: turno ao fundo, linhas das horas, sessões e "agora".
+  
   Widget _colunaDia(DateTime dia, int horaInicial, int totalHoras) {
     final turnos = dados.turnos.where((t) => _mesmoDia(t.inicio, dia));
     final atendimentos =
         dados.atendimentos.where((a) => _mesmoDia(a.inicio, dia));
+    final livres = dados.livres.where((l) => _mesmoDia(l.inicio, dia));
+
     final agora = DateTime.now();
     final fimDaGrade = totalHoras * _alturaHora;
 
-    // Converte um horário na posição vertical (em pixels) dentro da grade
+    
     double posicao(DateTime horario) =>
         ((horario.hour - horaInicial) * 60 + horario.minute) *
         _alturaHora /
@@ -127,7 +125,22 @@ class GradeHorarios extends StatelessWidget {
               right: 0,
               child: const ColoredBox(color: AppColors.verdeFundo),
             ),
-          // Linha de cada hora
+  
+
+          
+          for (final livre in livres)
+            Positioned(
+              top: posicao(livre.inicio),
+              height: max(posicao(livre.fim) - posicao(livre.inicio), 20),
+              left: 2,
+              right: 2,
+              child: _BlocoLivre(
+                livre: livre,
+                compacto: dias.length > 1,
+                aoTocar: aoTocarLivre,
+              ),
+            ),
+
           for (var i = 1; i < totalHoras; i++)
             Positioned(
               top: i * _alturaHora,
@@ -181,6 +194,8 @@ class GradeHorarios extends StatelessWidget {
         atendimento.inicio,
         if (atendimento.fim != null) atendimento.fim!,
       ],
+      for (final livre in dados.livres) ...[livre.inicio, livre.fim],
+
     ];
     for (final horario in horarios) {
       inicio = min(inicio, horario.hour);
@@ -262,6 +277,52 @@ class _BlocoAtendimento extends StatelessWidget {
     );
   }
 }
+
+class _BlocoLivre extends StatelessWidget {
+  final HorarioLivre livre;
+  final bool compacto;
+  final void Function(HorarioLivre)? aoTocar;
+
+  const _BlocoLivre({
+    required this.livre,
+    required this.compacto,
+    required this.aoTocar,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final tocar = aoTocar;
+    return Material(
+      color: AppColors.creme,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(8),
+        side: const BorderSide(color: AppColors.cinzaClaro),
+      ),
+      clipBehavior: Clip.antiAlias,
+      child: InkWell(
+        onTap: tocar == null ? null : () => tocar(livre),
+        child: Align(
+          alignment: Alignment.topLeft,
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 4),
+            child: Text(
+              compacto
+                  ? 'Livre'
+                  : 'Horário livre · ${_hora(livre.inicio)} – ${_hora(livre.fim)}',
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: TextStyle(
+                fontSize: compacto ? 11 : 13,
+                color: AppColors.cinzaEscuro,
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
 
 // ----- Funções de data -----
 
