@@ -68,10 +68,17 @@ class AppTheme {
   }
 
   /// Títulos: Cinzel em negrito
-  static TextStyle _titulo(TextStyle? base) =>
-      GoogleFonts.cinzel(textStyle: base, fontWeight: FontWeight.bold);
+  static TextStyle _titulo(TextStyle? base) {
+    return GoogleFonts.cinzel(
+      textStyle: base,
+      fontWeight: FontWeight.bold,
+    ).copyWith(inherit: true);
+  }
 
   /// Subtítulos: Cinzel sem negrito
-  static TextStyle _subtitulo(TextStyle? base) =>
-      GoogleFonts.cinzel(textStyle: base);
+  static TextStyle _subtitulo(TextStyle? base) {
+    return GoogleFonts.cinzel(
+      textStyle: base,
+    ).copyWith(inherit: true);
+  }
 }

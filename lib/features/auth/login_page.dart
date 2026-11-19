@@ -43,7 +43,7 @@ class _LoginPageState extends State<LoginPage> {
         _usuarioController.text.trim(),
         _senhaController.text,
       );
-      Sessao.iniciar(usuario);
+      await Sessao.iniciar(usuario);
       if (!mounted) return;
       context.go(usuario.ehCliente ? '/cliente/selos' : '/');
     } on AuthException catch (e) {

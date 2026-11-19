@@ -242,63 +242,78 @@ class _MeusDadosPageState extends State<MeusDadosPage> {
   void _confirmarSalvamentoMockado() {
     showDialog<void>(
       context: context,
-      builder: (context) {
-        return AlertDialog(
+      barrierDismissible: false,
+      builder: (dialogContext) {
+        return Dialog(
           backgroundColor: AppColors.branco,
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(18),
           ),
-          content: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Container(
-                width: 64,
-                height: 64,
-                decoration: BoxDecoration(
-                  color: AppColors.verdeFundo,
-                  shape: BoxShape.circle,
-                ),
-                child: const Icon(
-                  Icons.check_circle_outline,
-                  color: AppColors.verde,
-                  size: 38,
-                ),
-              ),
-              const SizedBox(height: 18),
-              const Text(
-                'Alterações salvas!',
-                textAlign: TextAlign.center,
-                style: TextStyle(
-                  color: AppColors.marrom,
-                  fontSize: 19,
-                  fontWeight: FontWeight.bold,
-                ),
-              ),
-              const SizedBox(height: 10),
-              const Text(
-                'Suas informações foram atualizadas com sucesso.',
-                textAlign: TextAlign.center,
-                style: TextStyle(
-                  color: AppColors.cinza,
-                  fontSize: 14,
-                ),
-              ),
-            ],
-          ),
-          actionsAlignment: MainAxisAlignment.center,
-          actions: [
-            ElevatedButton(
-              onPressed: () => Navigator.pop(context),
-              style: ElevatedButton.styleFrom(
-                backgroundColor: AppColors.verde,
-                foregroundColor: AppColors.branco,
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(10),
-                ),
-              ),
-              child: const Text('Entendi'),
+          child: Padding(
+            padding: const EdgeInsets.symmetric(
+              horizontal: 24,
+              vertical: 20,
             ),
-          ],
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Container(
+                  width: 64,
+                  height: 64,
+                  decoration: BoxDecoration(
+                    color: AppColors.verdeFundo,
+                    shape: BoxShape.circle,
+                  ),
+                  child: const Icon(
+                    Icons.check_circle_outline,
+                    color: AppColors.verde,
+                    size: 38,
+                  ),
+                ),
+                const SizedBox(height: 18),
+                const Text(
+                  'Alterações salvas!',
+                  textAlign: TextAlign.center,
+                  style: TextStyle(
+                    color: AppColors.marrom,
+                    fontSize: 19,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+                const SizedBox(height: 10),
+                const Text(
+                  'Suas informações foram atualizadas com sucesso.',
+                  textAlign: TextAlign.center,
+                  style: TextStyle(
+                    color: AppColors.cinza,
+                    fontSize: 14,
+                  ),
+                ),
+                const SizedBox(height: 22),
+                SizedBox(
+                  width: 120,
+                  height: 36,
+                  child: ElevatedButton(
+                    onPressed: () => Navigator.pop(dialogContext),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: AppColors.verde,
+                      foregroundColor: AppColors.branco,
+                      elevation: 0,
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(10),
+                      ),
+                    ),
+                    child: const Text(
+                      'Entendi',
+                      maxLines: 1,
+                      softWrap: false,
+                      textAlign: TextAlign.center,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
         );
       },
     );
