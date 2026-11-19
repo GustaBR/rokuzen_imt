@@ -16,6 +16,7 @@ class HistoricoPage extends StatefulWidget {
 
 class _HistoricoPageState extends State<HistoricoPage> {
   late Future<List<Atendimento>> futureAtendimentos;
+  String _filtro = '';
   
   @override
   void initState() {
@@ -66,83 +67,106 @@ Future<void> _mostrarErro(String mensagem) {
   Widget build(BuildContext context) {
     return Container(
       color: AppColors.fundoConteudo,
-      child: Center(
-        child: FutureBuilder<List<Atendimento>>(future: futureAtendimentos, builder: (context, snapshot) {
-          if (snapshot.connectionState == ConnectionState.waiting) {
-            return const CircularProgressIndicator();
-          }
+      child: Column(
+        children: [
+          TextField(
+            decoration: InputDecoration(
+              icon: Padding(
+                padding: const EdgeInsets.only(left: 20),
+                child: Icon(Icons.search),
+              ),
+              hintText: "Pesquisar por cliente...",
+            ),
+            onChanged: (valor) {
+              setState(() {
+                _filtro = valor;
+              });
+            },
+          ),
+          Expanded(
+            child: FutureBuilder<List<Atendimento>>(future: futureAtendimentos, builder: (context, snapshot) {
+              if (snapshot.connectionState == ConnectionState.waiting) {
+                return Center(child: const CircularProgressIndicator());
+              }
+                      
+              if (snapshot.hasError) {
+                return Center(
+                  child: const Text('Não foi possível carregar os atendimentos.'),
+                );
+              }
+                      
+              if (!snapshot.hasData || snapshot.data!.isEmpty) {
+                return Center(child: const Text('Nenhum atendimento encontrado.'));
+              }
+                      
+              final atendimentos = snapshot.data!;
+              final atendimentosFiltrados = atendimentos.where((a) => a.cliente.toLowerCase().contains(_filtro.toLowerCase())).toList();
 
-          if (snapshot.hasError) {
-            return const Text(
-              'Não foi possível carregar os atendimentos.',
-            );
-          }
+              if (atendimentosFiltrados.isEmpty) {
+                return Center(child: const Text('Cliente não identificado.'));
+              }
 
-          if (!snapshot.hasData || snapshot.data!.isEmpty) {
-            return const Text('Nenhum atendimento encontrado.');
-          }
-
-          final atendimentos = snapshot.data!;
-
-          return ListView.builder(
-            itemCount: atendimentos.length,
-            itemBuilder: (context, index) {
-              final atendimento = atendimentos[index];
-
-              return Card(
-                margin: const EdgeInsets.symmetric(
-                  horizontal: 16,
-                  vertical: 8,
-                ),
-                child: Padding(
-                  padding: const EdgeInsets.all(16),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Row(
+              return ListView.builder(
+                itemCount: atendimentosFiltrados.length,
+                itemBuilder: (context, index) {
+                  final atendimento = atendimentosFiltrados[index];
+                      
+                  return Card(
+                    margin: const EdgeInsets.symmetric(
+                      horizontal: 16,
+                      vertical: 8,
+                    ),
+                    child: Padding(
+                      padding: const EdgeInsets.all(16),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          Icon(Icons.person, size: 22),
-                          const SizedBox(width: 6),
-                          Text(
-                            atendimento.cliente,
-                            style: TextStyle(
-                              fontSize: 18,
-                              fontWeight: FontWeight.bold,
-                            ),
+                          Row(
+                            children: [
+                              Icon(Icons.person, size: 22),
+                              const SizedBox(width: 6),
+                              Text(
+                                atendimento.cliente,
+                                style: TextStyle(
+                                  fontSize: 18,
+                                  fontWeight: FontWeight.bold,
+                                ),
+                              ),
+                            ],
+                          ),
+                          const SizedBox(height: 12),
+                          Row(
+                            children: [
+                              const Icon(Icons.access_time, size: 20),
+                              const SizedBox(width: 8),
+                              Text('Início: ${_formatarHorario(atendimento.inicio)}'),
+                            ],
+                          ),
+                          const SizedBox(height: 8),
+                          Row(
+                            children: [
+                              const Icon(Icons.access_time_filled, size: 20),
+                              const SizedBox(width: 8),
+                              Text('Fim: ${_formatarHorario(atendimento.fim)}'),
+                            ],
+                          ),
+                          const SizedBox(height: 8),
+                          Row(
+                            children: [
+                              const Icon(Icons.money, size: 20),
+                              const SizedBox(width: 8),
+                              Text('Valor: ${atendimento.valor != null ? "R\$${atendimento.valor!.toStringAsFixed(2)}" : "Não informado"}'),
+                            ],
                           ),
                         ],
                       ),
-                      const SizedBox(height: 12),
-                      Row(
-                        children: [
-                          const Icon(Icons.access_time, size: 20),
-                          const SizedBox(width: 8),
-                          Text('Início: ${_formatarHorario(atendimento.inicio)}'),
-                        ],
-                      ),
-                      const SizedBox(height: 8),
-                      Row(
-                        children: [
-                          const Icon(Icons.access_time_filled, size: 20),
-                          const SizedBox(width: 8),
-                          Text('Fim: ${_formatarHorario(atendimento.fim)}'),
-                        ],
-                      ),
-                      const SizedBox(height: 8),
-                      Row(
-                        children: [
-                          const Icon(Icons.money, size: 20),
-                          const SizedBox(width: 8),
-                          Text('Valor: ${atendimento.valor != null ? "R\$${atendimento.valor!.toStringAsFixed(2)}" : "Não informado"}'),
-                        ],
-                      ),
-                    ],
-                  ),
-                ),
+                    ),
+                  );
+                },
               );
-            },
-          );
-        }),
+            }),
+          ),
+        ],
       ),
     );
   }
