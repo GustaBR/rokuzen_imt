@@ -1,54 +1,52 @@
 import 'package:flutter/material.dart';
 
+import '../../../core/models/usuario.dart';
+import '../../../core/sessao.dart';
 import '../../../core/theme/app_colors.dart';
 import '../agenda_service.dart';
 import '../datas.dart';
 import 'campo_hora.dart';
 
-/// Abre o formulário para sinalizar horários livres em um ou vários dias.
-/// Devolve o resultado, ou null se a pessoa cancelar.
-Future<ResultadoHorariosLivres?> mostrarNovoHorarioLivre(
+Future<ResultadoDisponibilidade?> mostrarNovaDisponibilidade(
   BuildContext context,
   DateTime diaInicial,
   AgendaService service,
 ) {
-  return showDialog<ResultadoHorariosLivres>(
+  return showDialog<ResultadoDisponibilidade>(
     context: context,
     builder: (_) =>
-        _NovoHorarioLivreDialog(diaInicial: diaInicial, service: service),
+        _NovaDisponibilidadeDialog(diaInicial: diaInicial, service: service),
   );
 }
 
-class _NovoHorarioLivreDialog extends StatefulWidget {
+class _NovaDisponibilidadeDialog extends StatefulWidget {
   final DateTime diaInicial;
   final AgendaService service;
 
-  const _NovoHorarioLivreDialog({
+  const _NovaDisponibilidadeDialog({
     required this.diaInicial,
     required this.service,
   });
 
   @override
-  State<_NovoHorarioLivreDialog> createState() =>
-      _NovoHorarioLivreDialogState();
+  State<_NovaDisponibilidadeDialog> createState() =>
+      _NovaDisponibilidadeDialogState();
 }
 
-class _NovoHorarioLivreDialogState extends State<_NovoHorarioLivreDialog> {
+class _NovaDisponibilidadeDialogState
+    extends State<_NovaDisponibilidadeDialog> {
+  late final List<Unidade> _unidades;
+  String? _unidadeId;
   late DateTime _de;
   late DateTime _ate;
-
-  /// Dias da semana escolhidos (1 = segunda ... 7 = domingo).
-  final Set<int> _diasDaSemana = {1, 2, 3, 4, 5, 6, 7};
-
-  TimeOfDay _inicio = const TimeOfDay(hour: 18, minute: 0);
-  TimeOfDay _fim = const TimeOfDay(hour: 20, minute: 0);
+  final Set<int> _diasDaSemana = {1, 2, 3, 4, 5};
+  final Set<DateTime> _diasRetirados = {};
+  TimeOfDay _inicio = const TimeOfDay(hour: 10, minute: 0);
+  TimeOfDay _fim = const TimeOfDay(hour: 18, minute: 0);
   bool _salvando = false;
   String? _erro;
 
-  /// Horas de 06 a 23.
   static final _horas = [for (var hora = 6; hora <= 23; hora++) hora];
-
-  /// Maior período que dá para marcar de uma vez (o servidor aceita até 62).
   static const _maximoDeDias = 62;
 
   bool get _variosDias => _ate.isAfter(_de);
@@ -56,13 +54,15 @@ class _NovoHorarioLivreDialogState extends State<_NovoHorarioLivreDialog> {
   @override
   void initState() {
     super.initState();
-    // Não deixa começar num dia que já passou
+    _unidades = Sessao.usuario?.unidades ?? [];
+    _unidadeId = Sessao.unidade?.id ??
+        (_unidades.isEmpty ? null : _unidades.first.id);
+
     final hoje = soData(DateTime.now());
     _de = widget.diaInicial.isBefore(hoje) ? hoje : widget.diaInicial;
     _ate = _de;
   }
 
-  /// [dias] dias depois de [data] (sem problema com horário de verão).
   DateTime _somarDias(DateTime data, int dias) =>
       DateTime(data.year, data.month, data.day + dias);
 
@@ -77,7 +77,6 @@ class _NovoHorarioLivreDialogState extends State<_NovoHorarioLivreDialog> {
     if (dia == null) return;
     setState(() {
       _de = dia;
-      // "Até" não pode ficar antes do "De" nem passar do limite
       if (_ate.isBefore(_de) ||
           _ate.isAfter(_somarDias(_de, _maximoDeDias - 1))) {
         _ate = _de;
@@ -95,21 +94,34 @@ class _NovoHorarioLivreDialogState extends State<_NovoHorarioLivreDialog> {
     if (dia != null) setState(() => _ate = dia);
   }
 
-  /// Um período (início, fim) para cada dia escolhido.
+  List<DateTime> _diasDoPeriodo() {
+    return [
+      for (var dia = _de; !dia.isAfter(_ate); dia = _somarDias(dia, 1))
+        if (!_variosDias || _diasDaSemana.contains(dia.weekday)) dia,
+    ];
+  }
+
   List<(DateTime, DateTime)> _periodos() {
-    final periodos = <(DateTime, DateTime)>[];
-    for (var dia = _de; !dia.isAfter(_ate); dia = _somarDias(dia, 1)) {
-      // Com um dia só, os dias da semana não importam
-      if (_variosDias && !_diasDaSemana.contains(dia.weekday)) continue;
-      periodos.add((_comHora(dia, _inicio), _comHora(dia, _fim)));
-    }
-    return periodos;
+    return [
+      for (final dia in _diasDoPeriodo())
+        if (!_diasRetirados.contains(dia))
+          (_comHora(dia, _inicio), _comHora(dia, _fim)),
+    ];
   }
 
   DateTime _comHora(DateTime dia, TimeOfDay hora) =>
       DateTime(dia.year, dia.month, dia.day, hora.hour, hora.minute);
 
   Future<void> _salvar() async {
+    final unidade = _unidadeId;
+    if (unidade == null) {
+      setState(
+        () => _erro = 'Não encontramos uma unidade no seu cadastro. '
+            'Fale com a secretaria.',
+      );
+      return;
+    }
+
     final minutosInicio = _inicio.hour * 60 + _inicio.minute;
     final minutosFim = _fim.hour * 60 + _fim.minute;
     if (minutosFim <= minutosInicio) {
@@ -119,9 +131,7 @@ class _NovoHorarioLivreDialogState extends State<_NovoHorarioLivreDialog> {
 
     final periodos = _periodos();
     if (periodos.isEmpty) {
-      setState(
-        () => _erro = 'Nenhum dos dias da semana escolhidos está no período',
-      );
+      setState(() => _erro = 'Nenhum dia escolhido no período');
       return;
     }
 
@@ -131,7 +141,10 @@ class _NovoHorarioLivreDialogState extends State<_NovoHorarioLivreDialog> {
     });
 
     try {
-      final resultado = await widget.service.criarHorariosLivres(periodos);
+      final resultado = await widget.service.criarDisponibilidade(
+        unidade: unidade,
+        periodos: periodos,
+      );
       if (mounted) Navigator.pop(context, resultado);
     } on AgendaException catch (e) {
       if (mounted) setState(() => _erro = e.mensagem);
@@ -145,20 +158,42 @@ class _NovoHorarioLivreDialogState extends State<_NovoHorarioLivreDialog> {
     final quantidade = _periodos().length;
 
     return AlertDialog(
-      title: const Text('Novo horário livre'),
+      title: const Text('Horários disponíveis'),
       content: SizedBox(
-        width: 440,
+        width: 480,
         child: SingleChildScrollView(
           child: Column(
             mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
               const Text(
-                'Sinalize quando você está disponível fora da escala. '
-                'Para vários dias, escolha o período e os dias da semana.',
+                'Informe quando você pode atender. A secretaria vai marcar '
+                'seus atendimentos dentro desses horários.',
                 style: TextStyle(fontSize: 12, color: AppColors.textoSecundario),
               ),
               const SizedBox(height: 16),
+              if (_unidades.length > 1) ...[
+                DropdownButtonFormField<String>(
+                  initialValue: _unidadeId,
+                  isExpanded: true,
+                  decoration: decoracaoDeDialogo('Unidade'),
+                  items: [
+                    for (final unidade in _unidades)
+                      DropdownMenuItem(
+                        value: unidade.id,
+                        child: Text(unidade.nome),
+                      ),
+                  ],
+                  onChanged: (id) => setState(() => _unidadeId = id),
+                ),
+                const SizedBox(height: 12),
+              ] else if (_unidades.length == 1) ...[
+                Text(
+                  'Unidade: ${_unidades.first.nome}',
+                  style: const TextStyle(fontWeight: FontWeight.w600),
+                ),
+                const SizedBox(height: 12),
+              ],
               Row(
                 children: [
                   Expanded(child: _botaoData('De', _de, _escolherDe)),
@@ -206,11 +241,38 @@ class _NovoHorarioLivreDialogState extends State<_NovoHorarioLivreDialog> {
                 horas: _horas,
                 aoMudar: (hora) => setState(() => _fim = hora),
               ),
+              if (_variosDias) ...[
+                const SizedBox(height: 16),
+                const Text('Dias', style: TextStyle(fontWeight: FontWeight.w600)),
+                const Text(
+                  'Toque num dia para tirá-lo (ex.: uma folga).',
+                  style: TextStyle(fontSize: 12, color: AppColors.textoSecundario),
+                ),
+                const SizedBox(height: 6),
+                Wrap(
+                  spacing: 6,
+                  runSpacing: 6,
+                  children: [
+                    for (final dia in _diasDoPeriodo())
+                      FilterChip(
+                        label: Text(_diaCurto(dia)),
+                        selected: !_diasRetirados.contains(dia),
+                        onSelected: (marcado) => setState(() {
+                          if (marcado) {
+                            _diasRetirados.remove(dia);
+                          } else {
+                            _diasRetirados.add(dia);
+                          }
+                        }),
+                      ),
+                  ],
+                ),
+              ],
               const SizedBox(height: 12),
               Text(
                 quantidade == 1
-                    ? 'Será marcado 1 dia'
-                    : 'Serão marcados $quantidade dias',
+                    ? 'Será adicionado 1 dia à sua escala'
+                    : 'Serão adicionados $quantidade dias à sua escala',
                 style: const TextStyle(color: AppColors.textoSecundario),
               ),
               if (_erro != null)
@@ -243,6 +305,11 @@ class _NovoHorarioLivreDialogState extends State<_NovoHorarioLivreDialog> {
       ],
     );
   }
+
+  String _diaCurto(DateTime dia) =>
+      '${diasDaSemanaCurtos[dia.weekday - 1]} '
+      '${dia.day.toString().padLeft(2, '0')}/'
+      '${dia.month.toString().padLeft(2, '0')}';
 
   Widget _botaoData(String rotulo, DateTime data, VoidCallback aoTocar) {
     final dia = data.day.toString().padLeft(2, '0');

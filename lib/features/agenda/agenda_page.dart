@@ -1,15 +1,13 @@
 import 'package:flutter/material.dart';
-import 'widgets/novo_atendimento.dart';
+
 import '../../core/theme/app_colors.dart';
 import 'agenda_service.dart';
 import 'datas.dart';
 import 'widgets/faixa_semana.dart';
-import 'widgets/lista_do_dia.dart';
-import 'widgets/proximos_atendimentos.dart';
 import 'widgets/grade_horarios.dart';
-import 'widgets/novo_horario_livre.dart';
-
-
+import 'widgets/lista_do_dia.dart';
+import 'widgets/nova_disponibilidade.dart';
+import 'widgets/proximos_atendimentos.dart';
 
 class AgendaPage extends StatefulWidget {
   const AgendaPage({super.key});
@@ -34,7 +32,6 @@ class _AgendaPageState extends State<AgendaPage> {
     _carregar();
   }
 
-  /// Carrega a semana inteira de uma vez (segunda a domingo).
   Future<void> _carregar() async {
     setState(() {
       _carregando = true;
@@ -56,7 +53,6 @@ class _AgendaPageState extends State<AgendaPage> {
     }
   }
 
-  /// direcao = -1 volta uma semana, 1 avança uma semana.
   void _mudarSemana(int direcao) {
     setState(() {
       _diaSelecionado = _diaSelecionado.add(Duration(days: 7 * direcao));
@@ -69,7 +65,6 @@ class _AgendaPageState extends State<AgendaPage> {
     _carregar();
   }
 
-  /// Trocar de dia dentro da mesma semana não precisa buscar de novo.
   void _selecionarDia(DateTime dia) {
     setState(() {
       _diaSelecionado = dia;
@@ -77,10 +72,8 @@ class _AgendaPageState extends State<AgendaPage> {
     });
   }
 
-     /// Abre o formulário de horário livre; se marcar, vai para o primeiro dia
-  /// marcado e mostra os dias que ficaram de fora, se houver.
-  Future<void> _novoHorarioLivre() async {
-    final resultado = await mostrarNovoHorarioLivre(
+  Future<void> _novaDisponibilidade() async {
+    final resultado = await mostrarNovaDisponibilidade(
       context,
       _diaSelecionado,
       _service,
@@ -90,12 +83,11 @@ class _AgendaPageState extends State<AgendaPage> {
     final quantidade = resultado.criados.length;
     _mostrarMensagem(
       quantidade == 1
-          ? 'Horário livre marcado'
-          : '$quantidade horários livres marcados',
+          ? '1 dia adicionado à sua escala'
+          : '$quantidade dias adicionados à sua escala',
     );
     setState(() {
       _diaSelecionado = soData(resultado.criados.first);
-      // Vários dias: abre a visão Semana para ver todos
       _verSemana = quantidade > 1;
     });
     _carregar();
@@ -105,12 +97,11 @@ class _AgendaPageState extends State<AgendaPage> {
     }
   }
 
-  
   Future<void> _mostrarIgnorados(List<DiaIgnorado> ignorados) {
     return showDialog<void>(
       context: context,
       builder: (context) => AlertDialog(
-        title: const Text('Alguns dias não foram marcados'),
+        title: const Text('Alguns dias não foram adicionados'),
         content: SizedBox(
           width: 440,
           child: SingleChildScrollView(
@@ -152,60 +143,16 @@ class _AgendaPageState extends State<AgendaPage> {
     );
   }
 
-
-  /// Ao tocar num horário livre: marcar um particular nele ou removê-lo.
-  Future<void> _tocarHorarioLivre(HorarioLivre livre) async {
-    final jaPassou = livre.fim.isBefore(DateTime.now());
-    final escolha = await showDialog<String>(
-      context: context,
-      builder: (context) => SimpleDialog(
-        title: Text(
-          'Horário livre · ${hora(livre.inicio)} – ${hora(livre.fim)}',
-        ),
-        children: [
-          if (!jaPassou)
-            SimpleDialogOption(
-              onPressed: () => Navigator.pop(context, 'particular'),
-              child: const ListTile(
-                leading: Icon(Icons.person_add_alt_1_outlined),
-                title: Text('Marcar atendimento particular'),
-              ),
-            ),
-          SimpleDialogOption(
-            onPressed: () => Navigator.pop(context, 'remover'),
-            child: const ListTile(
-              leading: Icon(Icons.delete_outline),
-              title: Text('Remover horário livre'),
-            ),
-          ),
-        ],
-      ),
-    );
-    if (!mounted) return;
-
-    if (escolha == 'particular') {
-      await _novoParticular(livre);
-    } else if (escolha == 'remover') {
-      await _removerHorarioLivre(livre);
-    }
-  }
-
-  Future<void> _novoParticular(HorarioLivre livre) async {
-    final marcado = await mostrarNovoAtendimento(context, livre, _service);
-    if (marcado == null) return;
-
-    _mostrarMensagem('Atendimento particular marcado');
-    _carregar();
-  }
-
-  Future<void> _removerHorarioLivre(HorarioLivre livre) async {
+  Future<void> _removerTurno(Turno turno) async {
+    final fim = turno.fim == null ? '' : ' – ${hora(turno.fim!)}';
     final confirmou = await showDialog<bool>(
       context: context,
       builder: (context) => AlertDialog(
-        title: const Text('Remover horário livre?'),
+        title: const Text('Tirar este horário da escala?'),
         content: Text(
-          '${diaPorExtenso(livre.inicio)}, '
-          '${hora(livre.inicio)} – ${hora(livre.fim)}',
+          '${diaPorExtenso(turno.inicio)}, ${hora(turno.inicio)}$fim\n\n'
+          'Atendimentos já marcados nesse horário não são desmarcados; '
+          'a secretaria cuida deles.',
         ),
         actions: [
           TextButton(
@@ -214,7 +161,7 @@ class _AgendaPageState extends State<AgendaPage> {
           ),
           TextButton(
             onPressed: () => Navigator.pop(context, true),
-            child: const Text('Remover'),
+            child: const Text('Tirar da escala'),
           ),
         ],
       ),
@@ -222,42 +169,8 @@ class _AgendaPageState extends State<AgendaPage> {
     if (confirmou != true) return;
 
     try {
-      await _service.removerHorarioLivre(livre.id);
-      _mostrarMensagem('Horário livre removido');
-      _carregar();
-    } on AgendaException catch (e) {
-      _mostrarMensagem(e.mensagem);
-    }
-  }
-
-
-  /// Confirma e remove um atendimento particular.
-  Future<void> _removerParticular(Atendimento particular) async {
-    final confirmou = await showDialog<bool>(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('Remover atendimento particular?'),
-        content: Text(
-          '${particular.cliente}\n'
-          '${diaPorExtenso(particular.inicio)}, ${hora(particular.inicio)}',
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context, false),
-            child: const Text('Cancelar'),
-          ),
-          TextButton(
-            onPressed: () => Navigator.pop(context, true),
-            child: const Text('Remover'),
-          ),
-        ],
-      ),
-    );
-    if (confirmou != true) return;
-
-    try {
-      await _service.removerParticular(particular.particularId!);
-      _mostrarMensagem('Atendimento removido');
+      await _service.removerDisponibilidade(turno.id);
+      _mostrarMensagem('Horário tirado da escala');
       _carregar();
     } on AgendaException catch (e) {
       _mostrarMensagem(e.mensagem);
@@ -270,7 +183,6 @@ class _AgendaPageState extends State<AgendaPage> {
       SnackBar(content: Text(mensagem)),
     );
   }
-
 
   @override
   Widget build(BuildContext context) {
@@ -287,7 +199,6 @@ class _AgendaPageState extends State<AgendaPage> {
               children: [
                 _titulo(),
                 const SizedBox(height: 20),
-                // Computador: lado a lado. Celular: um embaixo do outro.
                 if (largo)
                   Row(
                     crossAxisAlignment: CrossAxisAlignment.start,
@@ -310,7 +221,7 @@ class _AgendaPageState extends State<AgendaPage> {
     );
   }
 
-    Widget _titulo() {
+  Widget _titulo() {
     return Row(
       children: [
         Container(
@@ -331,7 +242,7 @@ class _AgendaPageState extends State<AgendaPage> {
                 style: Theme.of(context).textTheme.headlineSmall,
               ),
               const Text(
-                'Toque num horário livre para marcar um particular',
+                'Informe sua escala; a secretaria marca os atendimentos nela',
                 style: TextStyle(color: AppColors.textoSecundario),
               ),
             ],
@@ -339,14 +250,13 @@ class _AgendaPageState extends State<AgendaPage> {
         ),
         const SizedBox(width: 12),
         FilledButton.icon(
-          onPressed: _novoHorarioLivre,
+          onPressed: _novaDisponibilidade,
           icon: const Icon(Icons.add),
-          label: const Text('Horário livre'),
+          label: const Text('Horários disponíveis'),
         ),
       ],
     );
   }
-
 
   Widget _painelAgenda() {
     final dados = _dados;
@@ -376,9 +286,8 @@ class _AgendaPageState extends State<AgendaPage> {
               ),
             )
           else if (dados != null) ...[
-                        FaixaSemana(
+            FaixaSemana(
               inicioSemana: _inicioSemana,
-              // Na visão Semana nenhum dia fica destacado
               diaSelecionado: _verSemana ? DateTime(0) : _diaSelecionado,
               dados: dados,
               aoSelecionar: _selecionarDia,
@@ -398,7 +307,6 @@ class _AgendaPageState extends State<AgendaPage> {
               ),
             ),
             const SizedBox(height: 16),
-                        // Semana no computador: grade com os 7 dias lado a lado
             if (_verSemana && MediaQuery.sizeOf(context).width >= 700)
               SizedBox(
                 height: 640,
@@ -408,44 +316,36 @@ class _AgendaPageState extends State<AgendaPage> {
                       _inicioSemana.add(Duration(days: i)),
                   ],
                   dados: dados,
-                  aoTocarLivre: _tocarHorarioLivre,
                 ),
               )
-            // Semana no celular: lista agrupada por dia
             else if (_verSemana)
               ..._listaDaSemana(dados)
             else
               ListaDoDia(
                 dia: _diaSelecionado,
                 dados: dados,
-                aoTocarParticular: _removerParticular,
-                aoTocarLivre: _tocarHorarioLivre,
-
+                aoRemoverTurno: _removerTurno,
               ),
-
-
           ],
         ],
       ),
     );
   }
 
-    /// Todos os dias da semana que têm atendimento, um embaixo do outro.
   List<Widget> _listaDaSemana(AgendaDados dados) {
-    final diasComAtendimento = [
+    final diasComAlgo = [
       for (var i = 0; i < 7; i++) _inicioSemana.add(Duration(days: i)),
-        ].where((dia) =>
+    ].where((dia) =>
         dados.atendimentos.any((a) => mesmoDia(a.inicio, dia)) ||
-        dados.livres.any((l) => mesmoDia(l.inicio, dia))).toList();
+        dados.turnos.any((t) => mesmoDia(t.inicio, dia))).toList();
 
-
-    if (diasComAtendimento.isEmpty) {
+    if (diasComAlgo.isEmpty) {
       return const [
         Padding(
           padding: EdgeInsets.symmetric(vertical: 24),
           child: Center(
             child: Text(
-              'Nenhum atendimento nesta semana',
+              'Nenhum atendimento ou horário disponível nesta semana',
               style: TextStyle(color: AppColors.textoSecundario),
             ),
           ),
@@ -454,19 +354,16 @@ class _AgendaPageState extends State<AgendaPage> {
     }
 
     return [
-      for (var i = 0; i < diasComAtendimento.length; i++) ...[
+      for (var i = 0; i < diasComAlgo.length; i++) ...[
         if (i > 0) const Divider(height: 32),
         ListaDoDia(
-          dia: diasComAtendimento[i],
+          dia: diasComAlgo[i],
           dados: dados,
-          aoTocarParticular: _removerParticular,
-          aoTocarLivre: _tocarHorarioLivre,
-
+          aoRemoverTurno: _removerTurno,
         ),
       ],
     ];
   }
-
 
   Widget _navegacaoSemana() {
     return Row(

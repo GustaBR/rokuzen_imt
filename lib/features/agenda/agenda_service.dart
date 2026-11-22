@@ -1,10 +1,10 @@
 import 'dart:convert';
 
 import 'package:http/http.dart' as http;
-import '../../core/texto.dart';
 
 import '../../core/api/api_config.dart';
 import '../../core/sessao.dart';
+import '../../core/texto.dart';
 
 class Atendimento {
   final DateTime inicio;
@@ -13,19 +13,13 @@ class Atendimento {
   final String servico;
   final String? clienteId;
 
-  
-  final int? particularId;
-
   const Atendimento({
     required this.inicio,
     required this.fim,
     required this.cliente,
     required this.servico,
     required this.clienteId,
-    this.particularId,
   });
-
-  bool get ehParticular => particularId != null;
 
   factory Atendimento.fromJson(Map<String, dynamic> json) {
     return Atendimento(
@@ -36,58 +30,32 @@ class Atendimento {
       clienteId: json['clienteId'] as String?,
     );
   }
-
-  factory Atendimento.particularFromJson(Map<String, dynamic> json) {
-    return Atendimento(
-      inicio: DateTime.parse(json['inicio'] as String),
-      fim: DateTime.parse(json['fim'] as String),
-      cliente: json['cliente'] as String? ?? 'Atendimento particular',
-      servico: json['observacao'] as String? ?? 'Atendimento particular',
-      clienteId: null,
-      particularId: json['id'] as int,
-    );
-  }
 }
 
-/// Um turno de trabalho na escala (tabela events).
 class Turno {
-  final DateTime inicio;
-  final DateTime? fim;
-
-  const Turno({required this.inicio, required this.fim});
-
-  factory Turno.fromJson(Map<String, dynamic> json) {
-    return Turno(
-      inicio: DateTime.parse(json['inicio'] as String),
-      fim: json['fim'] == null ? null : DateTime.parse(json['fim'] as String),
-    );
-  }
-}
-
-
-class HorarioLivre {
   final int id;
   final DateTime inicio;
-  final DateTime fim;
+  final DateTime? fim;
+  final String? unidade;
 
-  const HorarioLivre({
+  const Turno({
     required this.id,
     required this.inicio,
     required this.fim,
+    this.unidade,
   });
 
-  factory HorarioLivre.fromJson(Map<String, dynamic> json) {
-    return HorarioLivre(
+  factory Turno.fromJson(Map<String, dynamic> json) {
+    return Turno(
       id: json['id'] as int,
       inicio: DateTime.parse(json['inicio'] as String),
-      fim: DateTime.parse(json['fim'] as String),
+      fim: json['fim'] == null ? null : DateTime.parse(json['fim'] as String),
+      unidade: json['unidade'] as String?,
     );
   }
 
-  bool contem(DateTime de, DateTime ate) =>
-      !de.isBefore(inicio) && !ate.isAfter(fim);
+  bool get podeRemover => inicio.isAfter(DateTime.now());
 }
-
 
 class DiaIgnorado {
   final DateTime dia;
@@ -96,30 +64,21 @@ class DiaIgnorado {
   const DiaIgnorado({required this.dia, required this.motivo});
 }
 
-class ResultadoHorariosLivres {
+class ResultadoDisponibilidade {
   final List<DateTime> criados;
   final List<DiaIgnorado> ignorados;
 
-  const ResultadoHorariosLivres({
+  const ResultadoDisponibilidade({
     required this.criados,
     required this.ignorados,
   });
 }
 
-
-
-
-
 class AgendaDados {
   final List<Atendimento> atendimentos;
   final List<Turno> turnos;
-  final List<HorarioLivre> livres;
 
-  const AgendaDados({
-    required this.atendimentos,
-    required this.turnos,
-    required this.livres,
-  });
+  const AgendaDados({required this.atendimentos, required this.turnos});
 }
 
 class AgendaException implements Exception {
@@ -127,7 +86,6 @@ class AgendaException implements Exception {
 
   const AgendaException(this.mensagem);
 }
-
 
 class AgendaService {
   Future<AgendaDados> buscar(DateTime inicio, DateTime fim) async {
@@ -141,82 +99,29 @@ class AgendaService {
       ),
     ) as Map<String, dynamic>;
 
-    
-    final atendimentos = [
-      for (final item in dados['sessoes'] as List)
-        Atendimento.fromJson(item as Map<String, dynamic>),
-      for (final item in dados['particulares'] as List)
-        Atendimento.particularFromJson(item as Map<String, dynamic>),
-    ]..sort((a, b) => a.inicio.compareTo(b.inicio));
-
-      return AgendaDados(
-      atendimentos: atendimentos,
+    return AgendaDados(
+      atendimentos: [
+        for (final item in dados['sessoes'] as List)
+          Atendimento.fromJson(item as Map<String, dynamic>),
+      ],
       turnos: [
         for (final item in dados['escala'] as List)
           Turno.fromJson(item as Map<String, dynamic>),
       ],
-      livres: [
-        for (final item in dados['livres'] as List)
-          HorarioLivre.fromJson(item as Map<String, dynamic>),
-      ],
     );
-
   }
 
-
-
-
-
-
-
-  /// Registra um atendimento particular do terapeuta logado.
-  Future<void> criarParticular({
-    required String cliente,
-    required String? observacao,
-    required DateTime inicio,
-    required DateTime fim,
+  Future<ResultadoDisponibilidade> criarDisponibilidade({
+    required String unidade,
+    required List<(DateTime, DateTime)> periodos,
   }) async {
     final resposta = await _enviar(
       () => http.post(
-        Uri.parse('${ApiConfig.baseUrl}/api/particulares'),
+        Uri.parse('${ApiConfig.baseUrl}/api/disponibilidade'),
         headers: {'Content-Type': 'application/json'},
         body: jsonEncode({
           'terapeuta': _idDoTerapeuta(),
-          'cliente': cliente,
-          'observacao': observacao,
-          'inicio': inicio.toIso8601String(),
-          'fim': fim.toIso8601String(),
-        }),
-      ),
-    );
-    if (resposta.statusCode != 201) {
-      throw AgendaException(_mensagemDeErro(resposta));
-    }
-  }
-
-  Future<void> removerParticular(int id) async {
-    final resposta = await _enviar(
-      () => http.delete(
-        Uri.parse('${ApiConfig.baseUrl}/api/particulares/$id').replace(
-          queryParameters: {'terapeuta': _idDoTerapeuta()},
-        ),
-      ),
-    );
-    if (resposta.statusCode != 200) {
-      throw AgendaException(_mensagemDeErro(resposta));
-    }
-  }
-
-      /// Sinaliza horários livres do terapeuta logado, um período por dia.
-  Future<ResultadoHorariosLivres> criarHorariosLivres(
-    List<(DateTime, DateTime)> periodos,
-  ) async {
-    final resposta = await _enviar(
-      () => http.post(
-        Uri.parse('${ApiConfig.baseUrl}/api/horarios_livres'),
-        headers: {'Content-Type': 'application/json'},
-        body: jsonEncode({
-          'terapeuta': _idDoTerapeuta(),
+          'unidade': unidade,
           'periodos': [
             for (final (inicio, fim) in periodos)
               {
@@ -233,7 +138,7 @@ class AgendaService {
 
     final dados =
         jsonDecode(utf8.decode(resposta.bodyBytes)) as Map<String, dynamic>;
-    return ResultadoHorariosLivres(
+    return ResultadoDisponibilidade(
       criados: [
         for (final item in dados['criados'] as List)
           DateTime.parse(item as String),
@@ -249,12 +154,10 @@ class AgendaService {
     );
   }
 
-
-  
-  Future<void> removerHorarioLivre(int id) async {
+  Future<void> removerDisponibilidade(int id) async {
     final resposta = await _enviar(
       () => http.delete(
-        Uri.parse('${ApiConfig.baseUrl}/api/horarios_livres/$id').replace(
+        Uri.parse('${ApiConfig.baseUrl}/api/disponibilidade/$id').replace(
           queryParameters: {'terapeuta': _idDoTerapeuta()},
         ),
       ),
@@ -264,7 +167,6 @@ class AgendaService {
     }
   }
 
-
   String _idDoTerapeuta() {
     final usuario = Sessao.usuario;
     if (usuario == null) {
@@ -273,7 +175,6 @@ class AgendaService {
     return usuario.id;
   }
 
-  /// GET que devolve o JSON da resposta (ou lança AgendaException).
   Future<Object?> _buscarJson(Uri endereco) async {
     final resposta = await _enviar(() => http.get(endereco));
     if (resposta.statusCode != 200) {
@@ -282,7 +183,6 @@ class AgendaService {
     return jsonDecode(utf8.decode(resposta.bodyBytes));
   }
 
-  /// Faz a chamada com tempo limite e transforma falha de rede em mensagem.
   Future<http.Response> _enviar(
     Future<http.Response> Function() chamada,
   ) async {
@@ -293,7 +193,6 @@ class AgendaService {
     }
   }
 
-  /// Usa a mensagem de erro que o servidor mandou, se houver.
   String _mensagemDeErro(http.Response resposta) {
     try {
       final dados = jsonDecode(utf8.decode(resposta.bodyBytes))
@@ -309,6 +208,3 @@ class AgendaService {
       '${data.year}-${data.month.toString().padLeft(2, '0')}-'
       '${data.day.toString().padLeft(2, '0')}';
 }
-
-
-
