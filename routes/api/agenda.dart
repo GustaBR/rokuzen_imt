@@ -3,9 +3,6 @@ import 'dart:io';
 import 'package:dart_frog/dart_frog.dart';
 import 'package:mysql_dart/mysql_dart.dart';
 
-/// GET /api/agenda?terapeuta=USR_UKEY&inicio=AAAA-MM-DD&fim=AAAA-MM-DD
-/// Devolve as sessões (atd), a escala (events) e os atendimentos
-/// particulares do terapeuta no período. A data "fim" não entra no período.
 Future<Response> onRequest(RequestContext context) async {
   if (context.request.method != HttpMethod.get) {
     return Response(statusCode: HttpStatus.methodNotAllowed);
@@ -28,7 +25,6 @@ Future<Response> onRequest(RequestContext context) async {
   };
 
   try {
-    // Sessões da Rokuzen: atd + cli (nome do cliente) + tpr (serviço)
     final sessoes = await pool.execute(
       '''
       SELECT
@@ -48,57 +44,24 @@ Future<Response> onRequest(RequestContext context) async {
       filtros,
     );
 
-    // Escala: events.title = usr_ukey; só vale com terapeuta e adm = 'S'
     final escala = await pool.execute(
       '''
       SELECT
-        DATE_FORMAT(`start`, '%Y-%m-%dT%H:%i:%s') AS inicio,
-        DATE_FORMAT(`end`, '%Y-%m-%dT%H:%i:%s') AS fim
-      FROM events
-      WHERE title = :terapeuta
-        AND terapeuta = 'S'
-        AND adm = 'S'
-        AND `start` >= :inicio
-        AND `start` < :fim
-      ORDER BY `start`
+        e.id,
+        DATE_FORMAT(e.`start`, '%Y-%m-%dT%H:%i:%s') AS inicio,
+        DATE_FORMAT(e.`end`, '%Y-%m-%dT%H:%i:%s') AS fim,
+        u.und_001_c AS unidade
+      FROM events e
+      LEFT JOIN und u ON u.und_ukey = e.und_ukey
+      WHERE e.title = :terapeuta
+        AND e.terapeuta = 'S'
+        AND e.adm = 'S'
+        AND e.`start` >= :inicio
+        AND e.`start` < :fim
+      ORDER BY e.`start`
       ''',
       filtros,
     );
-
-    // Atendimentos particulares que o próprio terapeuta registrou
-    final particulares = await pool.execute(
-      '''
-      SELECT
-        id,
-        cliente,
-        observacao,
-        DATE_FORMAT(inicio, '%Y-%m-%dT%H:%i:%s') AS inicio,
-        DATE_FORMAT(fim, '%Y-%m-%dT%H:%i:%s') AS fim
-      FROM maua_atendimento_particular
-      WHERE usr_ukey = :terapeuta
-        AND inicio >= :inicio
-        AND inicio < :fim
-      ORDER BY inicio
-      ''',
-      filtros,
-    );
-
-        
-    final livres = await pool.execute(
-      '''
-      SELECT
-        id,
-        DATE_FORMAT(inicio, '%Y-%m-%dT%H:%i:%s') AS inicio,
-        DATE_FORMAT(fim, '%Y-%m-%dT%H:%i:%s') AS fim
-      FROM maua_horario_livre
-      WHERE usr_ukey = :terapeuta
-        AND inicio >= :inicio
-        AND inicio < :fim
-      ORDER BY inicio
-      ''',
-      filtros,
-    );
-
 
     return Response.json(
       body: {
@@ -115,30 +78,12 @@ Future<Response> onRequest(RequestContext context) async {
         'escala': [
           for (final linha in escala.rows)
             {
-              'inicio': linha.typedColByName<String>('inicio'),
-              'fim': linha.typedColByName<String>('fim'),
-            },
-        ],
-        'particulares': [
-          for (final linha in particulares.rows)
-            {
-              'id': linha.typedColByName<int>('id'),
-              'cliente': linha.typedColByName<String>('cliente'),
-              'observacao': linha.typedColByName<String>('observacao'),
-              'inicio': linha.typedColByName<String>('inicio'),
-              'fim': linha.typedColByName<String>('fim'),
-            },
-        ],
-
-          'livres': [
-          for (final linha in livres.rows)
-            {
               'id': linha.typedColByName<int>('id'),
               'inicio': linha.typedColByName<String>('inicio'),
               'fim': linha.typedColByName<String>('fim'),
+              'unidade': linha.typedColByName<String>('unidade'),
             },
         ],
-
       },
     );
   } catch (e, stackTrace) {

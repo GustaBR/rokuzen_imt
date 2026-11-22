@@ -19,19 +19,27 @@ Future<Response> onRequest(RequestContext context, String id) async {
 
   try {
     final resultado = await pool.execute(
-      'DELETE FROM maua_atendimento_particular '
-      'WHERE id = :id AND usr_ukey = :terapeuta',
+      '''
+      DELETE FROM events
+      WHERE id = :id
+        AND title = :terapeuta
+        AND terapeuta = 'S'
+        AND `start` > NOW()
+      ''',
       {'id': idNumero, 'terapeuta': terapeuta},
     );
 
     if (resultado.affectedRows == BigInt.zero) {
-      return _erro(HttpStatus.notFound, 'Atendimento não encontrado');
+      return _erro(
+        HttpStatus.notFound,
+        'Horário não encontrado ou que já começou',
+      );
     }
 
     return Response.json(body: {'ok': true});
   } catch (e, stackTrace) {
     stderr
-      ..writeln('Erro ao remover atendimento particular: $e')
+      ..writeln('Erro ao tirar horário da escala: $e')
       ..writeln(stackTrace);
     return _erro(HttpStatus.internalServerError, 'Erro interno no servidor');
   }

@@ -1,4 +1,3 @@
-
 import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
@@ -304,9 +303,7 @@ class _InicioPageState extends State<InicioPage>
             width: 4,
             height: 42,
             decoration: BoxDecoration(
-              color: atendimento.ehParticular
-                  ? AppColors.roxo
-                  : AppColors.verde,
+              color: AppColors.verde,
               borderRadius: BorderRadius.circular(4),
             ),
           ),
@@ -338,24 +335,6 @@ class _InicioPageState extends State<InicioPage>
               ],
             ),
           ),
-          if (atendimento.ehParticular)
-            Container(
-              padding: const EdgeInsets.symmetric(
-                horizontal: 8,
-                vertical: 4,
-              ),
-              decoration: BoxDecoration(
-                color: AppColors.roxo,
-                borderRadius: BorderRadius.circular(20),
-              ),
-              child: const Text(
-                'Particular',
-                style: TextStyle(
-                  color: AppColors.branco,
-                  fontSize: 10,
-                ),
-              ),
-            ),
           if (duracao != null) ...[
             const SizedBox(width: 8),
             Text(
